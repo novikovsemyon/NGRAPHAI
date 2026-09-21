@@ -3,9 +3,7 @@
 namespace NGraph.Core;
 
 public static class NgContext
-{
-    #if REVIT2019_OR_GREATER
-    /// <summary>
+{/// <summary>
     ///     Find a parameter in the instance or symbol by identifier
     /// </summary>
     /// <param name="element">The element</param>
