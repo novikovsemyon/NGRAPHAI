@@ -11,9 +11,9 @@ public class Symbol_ID : Gabarit
 
     public Symbol_ID(Document doc, View view, EQ eq)
     {
-        ArgumentNullException.ThrowIfNull(doc);
-        ArgumentNullException.ThrowIfNull(view);
-        ArgumentNullException.ThrowIfNull(eq);
+        if (doc is null) throw new ArgumentNullException(nameof(doc));
+        if (view is null) throw new ArgumentNullException(nameof(view));
+        if (eq is null) throw new ArgumentNullException(nameof(eq));
 
         EQ = eq;
         FamilySymbol = new FilteredElementCollector(doc)
