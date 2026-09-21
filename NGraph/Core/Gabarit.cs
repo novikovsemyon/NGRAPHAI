@@ -30,16 +30,18 @@ public class Gabarit
     /// <param name="FamilySymbol"></param>
     /// <param name="ViewDrafting"></param>
     /// <returns></returns>
-    public static XYZ GetGabarit(FamilySymbol FamilySymbol, View ViewDrafting)
+    public static XYZ GetGabarit(FamilySymbol familySymbol, View viewDrafting)
     {
-        double Xmax = FamilySymbol.get_BoundingBox(ViewDrafting).Max.X;
-        double Xmin = FamilySymbol.get_BoundingBox(ViewDrafting).Min.X;
-        double Ymax = FamilySymbol.get_BoundingBox(ViewDrafting).Max.Y;
-        double Ymin = FamilySymbol.get_BoundingBox(ViewDrafting).Min.Y;
-        double dX = Xmax - Xmin;
-        double dY = Ymax - Ymin;
-        //return new XYZ(dX*10, dY*10, 0); //Учитываем на чертежном виде масштаб 1 к 10
-        return new XYZ(dX, dY, 0); //Учитываем на чертежном виде масштаб 1 к 10
+        ArgumentNullException.ThrowIfNull(familySymbol);
+        ArgumentNullException.ThrowIfNull(viewDrafting);
+
+        var boundingBox = familySymbol.get_BoundingBox(viewDrafting)
+            ?? throw new InvalidOperationException($"Не удалось получить габариты семейства '{familySymbol.Name}'.");
+
+        return new XYZ(
+            boundingBox.Max.X - boundingBox.Min.X,
+            boundingBox.Max.Y - boundingBox.Min.Y,
+            0);
     }
 
 
