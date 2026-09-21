@@ -1,4 +1,4 @@
-﻿using Autodesk.Revit.Attributes;
+using Autodesk.Revit.Attributes;
 using Autodesk.Revit.UI;
 using NGraph.Core;
 using Nice3point.Revit.Extensions.Runtime;
@@ -19,7 +19,8 @@ public class AlgoritmCreateSpecification : ExternalCommand
 
     public override void Execute()
     {
-        const string nameOfBdViewDrafting = "!_000_NGraph_БАЗА_ОБОРУДОВАНИЯ";
+        // Читаем настройки при запуске: сохранённое имя действует без перезапуска Revit.
+        string nameOfBdViewDrafting = NGraph.Core.UserSettings.Load().EquipmentView;
         var helper = new Helpers();
         var view = helper.AllElementsOfCategory(Document, BuiltInCategory.OST_Views)
             .FirstOrDefault(x => x.Name == nameOfBdViewDrafting);

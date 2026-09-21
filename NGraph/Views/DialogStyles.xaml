@@ -1,0 +1,34 @@
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <!-- Общие размеры и цвета сохраняют единый вид справки и настроек. -->
+    <Style TargetType="Window">
+        <Setter Property="FontFamily" Value="Segoe UI"/>
+        <Setter Property="FontSize" Value="14"/>
+        <Setter Property="Background" Value="#F4F6FA"/>
+        <Setter Property="Foreground" Value="#18263B"/>
+        <Setter Property="ResizeMode" Value="CanResize"/>
+    </Style>
+    <Style TargetType="Button">
+        <Setter Property="Padding" Value="16,8"/>
+        <Setter Property="MinHeight" Value="36"/>
+        <Setter Property="MinWidth" Value="100"/>
+        <Setter Property="Margin" Value="4,0"/>
+    </Style>
+    <Style TargetType="TextBox">
+        <Setter Property="Padding" Value="8,6"/>
+        <Setter Property="MinHeight" Value="34"/>
+    </Style>
+    <Style TargetType="ComboBox">
+        <Setter Property="Padding" Value="8,6"/>
+        <Setter Property="MinHeight" Value="34"/>
+    </Style>
+    <Style TargetType="TabItem"><Setter Property="Padding" Value="18,10"/></Style>
+    <Style x:Key="Heading" TargetType="TextBlock">
+        <Setter Property="FontSize" Value="20"/><Setter Property="FontWeight" Value="SemiBold"/>
+        <Setter Property="Margin" Value="0,0,0,12"/><Setter Property="TextWrapping" Value="Wrap"/>
+    </Style>
+    <Style x:Key="Body" TargetType="TextBlock">
+        <Setter Property="TextWrapping" Value="Wrap"/><Setter Property="Margin" Value="0,0,0,16"/>
+        <Setter Property="LineHeight" Value="23"/>
+    </Style>
+</ResourceDictionary>

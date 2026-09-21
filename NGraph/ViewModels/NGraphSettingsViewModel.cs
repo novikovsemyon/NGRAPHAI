@@ -1,7 +1,7 @@
-﻿namespace NGraph.ViewModels;
+namespace NGraph.ViewModels;
 
+/// <summary>Документ используется только для списка доступных чертёжных видов.</summary>
 public sealed class NGraphSettingsViewModel : ObservableObject
 {
-    public string? Text { get; set; }
-    public Document? Doc { get; set; }
+    public Document Doc { get; set; } = null!;
 }

@@ -1,4 +1,4 @@
-﻿using System.IO;
+using System.IO;
 using Autodesk.Revit.Attributes;
 using Autodesk.Revit.DB.Mechanical;
 using Autodesk.Revit.UI;
@@ -544,8 +544,10 @@ namespace NGraph.Commands;
             /// <param name="fromIni"></param>
             internal void EQipment(EqupmentModel eQs, bool fromIni)
             {
-                var mydocumentsPath = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments);
-                string[] allFoundFiles = Directory.GetFiles(@$"{mydocumentsPath}\REVIT\BETA-BIM\Настройки\", "*.ini", SearchOption.AllDirectories);
+                // Отсутствующая папка означает, что пользователь ещё не настроил соответствия.
+                var directory = NGraph.Core.UserSettings.Load().IniDirectory;
+                if (!Directory.Exists(directory)) return;
+                string[] allFoundFiles = Directory.GetFiles(directory, "*.ini", SearchOption.AllDirectories);
                 //Имя файла - ADSK_Группирование
                 //aSection [ADSK_Позиция]
                 foreach (string file in allFoundFiles)

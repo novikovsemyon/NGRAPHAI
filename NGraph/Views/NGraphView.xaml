@@ -1,42 +1,26 @@
-﻿<Window
-    x:Class="NGraph.Views.NGraphView"
-    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
-    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
-    xmlns:viewModel="clr-namespace:NGraph.ViewModels"
-    mc:Ignorable="d"
-    d:DataContext="{d:DesignInstance viewModel:NGraphViewModel}"
-    ResizeMode="NoResize"
-    WindowStartupLocation="CenterScreen"
-    Title="NGraph"
-    Height="150"
-    Width="550">
-    <Grid>
-        <Grid.RowDefinitions>
-            <RowDefinition Height="0.1*"/>
-            <RowDefinition Height="1*"/>
-            <RowDefinition Height="1*"/>
-            <RowDefinition Height="1*"/>
-            <RowDefinition Height="0.1*"/>
-            
-            <RowDefinition Height="0.2*"/>
-        </Grid.RowDefinitions>
-        <Grid.ColumnDefinitions>
-            <ColumnDefinition Width="0.1*"/>
-            <ColumnDefinition Width="1*"/>
-            <ColumnDefinition Width="0.1*"/>
-        </Grid.ColumnDefinitions>
-        <TextBlock Grid.Column="1" Grid.Row="1"
-            Text="NGraph -плагин по автоматике"
-            FontSize="20"/>
-        <TextBlock Grid.Column="1" Grid.Row="2">
-            <Hyperlink RequestNavigate="Hyperlink_OnRequestNavigate1" 
-                       NavigateUri="https://shsystems.ru">Инструкции, файлы, ссылки по работе плагина на сайте Shsystems.ru </Hyperlink> 
-        </TextBlock>
-        <TextBlock Grid.Column="1" Grid.Row="3">
-            <Hyperlink RequestNavigate="Hyperlink_OnRequestNavigate2" 
-                       NavigateUri="https://beta-bim.com/">Комплексные решения для цифровизации проектирования Beta-Bim.com </Hyperlink> 
-        </TextBlock>
-    </Grid>
+<Window x:Class="NGraph.Views.NGraphView"
+ xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+ WindowStartupLocation="CenterOwner" Title="NGraph — Справка" Width="900" Height="680" MinWidth="730" MinHeight="520" PreviewKeyDown="Window_PreviewKeyDown">
+ <Window.Resources><ResourceDictionary><ResourceDictionary.MergedDictionaries>
+  <ResourceDictionary Source="DialogStyles.xaml"/>
+ </ResourceDictionary.MergedDictionaries></ResourceDictionary></Window.Resources>
+ <Grid Margin="24"><Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="*"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
+  <StackPanel Margin="0,0,0,20"><TextBlock Text="Справка NGraph" FontSize="28" FontWeight="SemiBold"/>
+   <TextBlock Text="Схемы автоматизации · оборудование · листы" Foreground="#52627A" Margin="0,6,0,0"/>
+  </StackPanel>
+  <TabControl Grid.Row="1"><TabItem Header="Начало работы"><ScrollViewer VerticalScrollBarVisibility="Auto"><StackPanel Margin="22"><TextBlock Style="{StaticResource Heading}" Text="1. Подготовьте проект"/><TextBlock Style="{StaticResource Body}" Text="Откройте проект Revit с семействами и чертёжными видами базы данных. В «Настройках» выберите виды баз элементов, функциональных схем и оборудования. Кнопка «Проверить виды» проверяет их наличие в открытом проекте."/><TextBlock Style="{StaticResource Heading}" Text="2. Выберите рабочую команду"/><TextBlock Style="{StaticResource Body}" Text="Для работы со схемами откройте соответствующий чертёжный вид. Для нумерации заранее выделите листы в диспетчере проекта. Команды построения используют семейства и параметры вашей базы."/><TextBlock Style="{StaticResource Heading}" Text="3. Проверьте результат"/><TextBlock Style="{StaticResource Body}" Text="После построения проверьте состав схемы, обозначения оборудования и кабельные связи. Сохраните проект после проверки."/></StackPanel></ScrollViewer></TabItem><TabItem Header="Команды"><ScrollViewer VerticalScrollBarVisibility="Auto"><StackPanel Margin="22"><TextBlock Style="{StaticResource Heading}" Text="Нумератор листов"/><TextBlock Style="{StaticResource Body}" Text="Выделите листы в диспетчере проекта, запустите команду и выберите текстовый или целочисленный параметр. Задайте положительный начальный номер. Листы сортируются по существующему номеру; элементы других категорий пропускаются."/><TextBlock Style="{StaticResource Heading}" Text="Найти в модели"/><TextBlock Style="{StaticResource Body}" Text="Выберите элементы узлов рамкой. Команда читает NS_ElementId и выделяет существующие элементы модели. Пустые, неверные и устаревшие ссылки пропускаются; ESC отменяет выбор рамкой."/><TextBlock Style="{StaticResource Heading}" Text="Копировать кабель"/><TextBlock Style="{StaticResource Body}" Text="Выберите два чертёжных вида в диспетчере проекта. Копируются линии со стилем, содержащим *NG*, с сохранением стиля и закрепления. Источник и назначение определяются порядком видов, возвращаемым Revit. При ошибке операция откатывается целиком."/><TextBlock Style="{StaticResource Heading}" Text="Соответствия INI"/><TextBlock Style="{StaticResource Body}" Text="На вкладке «Файлы» настроек укажите папку. Имя файла должно совпадать с ADSK_Группирование, имя секции — с ADSK_Позиция. Значение Symbol задаёт имя типа графического обозначения."/></StackPanel></ScrollViewer></TabItem><TabItem Header="Решение проблем"><ScrollViewer VerticalScrollBarVisibility="Auto"><StackPanel Margin="22"><TextBlock Style="{StaticResource Heading}" Text="База данных не найдена"/><TextBlock Style="{StaticResource Body}" Text="Откройте «Настройки → Базы данных» и нажмите «Проверить виды». Убедитесь, что имена совпадают полностью и в проекте есть соответствующие чертёжные виды. Сохранённые имена общие для проектов пользователя."/><TextBlock Style="{StaticResource Heading}" Text="Нет параметра для нумерации"/><TextBlock Style="{StaticResource Body}" Text="Проверьте, что выбраны листы. В списке доступны записываемые текстовые и целочисленные параметры этих листов. Добавьте необходимый параметр в проект или выберите другой."/><TextBlock Style="{StaticResource Heading}" Text="Элемент не находится в модели"/><TextBlock Style="{StaticResource Body}" Text="Проверьте значение NS_ElementId у выбранного элемента узла. Связанный элемент модели мог быть удалён. Проверьте соответствие схемы текущему проекту."/><TextBlock Style="{StaticResource Heading}" Text="Не сохраняются настройки"/><TextBlock Style="{StaticResource Body}" Text="Проверьте путь к папке INI и права записи в файл настроек. Сообщение внизу окна содержит причину ошибки. «По умолчанию» меняет значения только в окне; для применения нажмите «Сохранить»."/></StackPanel></ScrollViewer></TabItem>
+   <TabItem Header="О программе"><ScrollViewer VerticalScrollBarVisibility="Auto"><StackPanel Margin="22">
+    <TextBlock Style="{StaticResource Heading}" Text="NGraph для Autodesk Revit"/>
+    <TextBlock Style="{StaticResource Body}" Text="Инструменты для построения схем автоматизации и оформления проектной документации. Сборки для Revit 2021–2027."/>
+    <TextBlock x:Name="VersionText" Style="{StaticResource Body}"/>
+    <TextBlock Style="{StaticResource Heading}" Text="Материалы и поддержка"/>
+    <TextBlock Margin="0,0,0,14"><Hyperlink NavigateUri="https://shsystems.ru" RequestNavigate="Link_RequestNavigate">Shsystems.ru — инструкции и материалы</Hyperlink></TextBlock>
+    <TextBlock Margin="0,0,0,14"><Hyperlink NavigateUri="https://beta-bim.com/" RequestNavigate="Link_RequestNavigate">Beta-Bim.com — решения для проектирования</Hyperlink></TextBlock>
+    <TextBlock Margin="0,0,0,20"><Hyperlink NavigateUri="https://github.com/novikovsemyon/NGRAPHAI" RequestNavigate="Link_RequestNavigate">Исходный код на GitHub</Hyperlink></TextBlock>
+    <Button Content="Копировать сведения о версии" HorizontalAlignment="Left" Click="Copy_Click"/>
+    <TextBlock x:Name="Status" TextWrapping="Wrap" Margin="0,12,0,0" AutomationProperties.LiveSetting="Polite"/>
+   </StackPanel></ScrollViewer></TabItem>
+  </TabControl>
+  <Button Grid.Row="2" Content="Закрыть" HorizontalAlignment="Right" Margin="0,16,0,0" Click="Close_Click"/>
+ </Grid>
 </Window>

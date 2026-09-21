@@ -1,4 +1,4 @@
-﻿using System.Windows.Annotations;
+using System.Windows.Annotations;
 using Autodesk.Revit.Attributes;
 using Autodesk.Revit.DB.Mechanical;
 using Autodesk.Revit.UI;
@@ -198,7 +198,7 @@ public class AlgoritmCreateFootorFromBd_del : ExternalCommand
  #region READ BASE DATA
             //Получаем базу данных (чертежный вид с элементами)
 
-            string nameOfBdViewDrafting = "!_000_NGraph_БАЗА ДАННЫХ_ФСА";
+            string nameOfBdViewDrafting = NGraph.Core.UserSettings.Load().FsaView;
             var el_view = fSAmodelHVAC.GetBDfromModel(Document,nameOfBdViewDrafting);
 
             if (el_view == null)
@@ -369,7 +369,7 @@ public class AlgoritmCreateFootorFromBd_del : ExternalCommand
  #region READ BASE DATA
             //Получаем базу данных (чертежный вид с элементами)
 
-            string nameOfBdViewDrafting = "!_000_NGraph_БАЗА ДАННЫХ_ФСА";
+            string nameOfBdViewDrafting = NGraph.Core.UserSettings.Load().FsaView;
             var el_view = fSAmodelHVAC.GetBDfromModel(Document,nameOfBdViewDrafting);
 
             if (el_view == null)
