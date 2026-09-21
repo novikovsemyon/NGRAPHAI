@@ -1,42 +1,64 @@
-<Window xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" x:Class="NGraph.Views.NGraphSettingsView"
- WindowStartupLocation="CenterOwner" Title="NGraph — Настройки" Width="860" Height="650" MinWidth="680" MinHeight="520" PreviewKeyDown="Window_PreviewKeyDown">
- <Window.Resources><ResourceDictionary><ResourceDictionary.MergedDictionaries>
-  <ResourceDictionary Source="DialogStyles.xaml"/>
- </ResourceDictionary.MergedDictionaries></ResourceDictionary></Window.Resources>
- <Grid Margin="24">
-  <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="*"/><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
-  <StackPanel Margin="0,0,0,20"><TextBlock Text="Настройки" FontSize="28" FontWeight="SemiBold"/>
-   <TextBlock x:Name="ProjectName" Margin="0,6,0,0" TextWrapping="Wrap" Foreground="#52627A"/>
-  </StackPanel>
-  <TabControl Grid.Row="1">
-   <TabItem Header="Базы данных"><ScrollViewer VerticalScrollBarVisibility="Auto"><StackPanel Margin="20">
-    <TextBlock Style="{StaticResource Body}" Text="Выберите чертёжные виды текущего проекта или введите имена для другого проекта. Настройки действуют для всех проектов этого пользователя."/>
-    <Label Target="{Binding ElementName=ElementsView}" Content="База элементов"/>
-    <ComboBox x:Name="ElementsView" IsEditable="True" ToolTip="Вид с готовыми графическими элементами"/>
-    <Label Target="{Binding ElementName=FsaView}" Content="База функциональных схем" Margin="0,12,0,0"/>
-    <ComboBox x:Name="FsaView" IsEditable="True"/>
-    <Label Target="{Binding ElementName=EquipmentView}" Content="База оборудования" Margin="0,12,0,0"/>
-    <ComboBox x:Name="EquipmentView" IsEditable="True"/>
-    <Button Content="Проверить виды" HorizontalAlignment="Left" Margin="0,18,0,0" Click="Check_Click"/>
-   </StackPanel></ScrollViewer></TabItem>
-   <TabItem Header="Файлы"><ScrollViewer VerticalScrollBarVisibility="Auto"><StackPanel Margin="20">
-    <TextBlock Style="{StaticResource Heading}" Text="Папка соответствий INI"/>
-    <TextBlock Style="{StaticResource Body}" Text="При построении схем по модели имя INI-файла сопоставляется с ADSK_Группирование, секция — с ADSK_Позиция, а ключ Symbol задаёт тип условного обозначения."/>
-    <Label Target="{Binding ElementName=IniDirectory}" Content="Полный путь к папке"/>
-    <TextBox x:Name="IniDirectory" TextWrapping="Wrap"/>
-    <Button Content="Выбрать по INI-файлу…" HorizontalAlignment="Left" Margin="0,12,0,18" Click="Browse_Click"/>
-    <TextBlock Style="{StaticResource Body}" Text="Укажите существующую папку. Если папки ещё нет, сначала создайте её в Проводнике. Файлы ищутся также во вложенных папках."/>
-    <TextBlock Text="Файл пользовательских настроек" FontWeight="SemiBold"/>
-    <TextBox x:Name="SettingsPath" IsReadOnly="True" BorderThickness="0" Background="Transparent" TextWrapping="Wrap" Margin="0,8,0,0"/>
-   </StackPanel></ScrollViewer></TabItem>
-  </TabControl>
-  <TextBlock Grid.Row="2" x:Name="Status" TextWrapping="Wrap" Margin="0,12,0,12" Foreground="#324D70" AutomationProperties.LiveSetting="Polite"/>
-  <Grid Grid.Row="3"><Grid.ColumnDefinitions><ColumnDefinition/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
-   <Button Content="По умолчанию" HorizontalAlignment="Left" Click="Defaults_Click"/>
-   <StackPanel Grid.Column="1" Orientation="Horizontal">
-    <Button Content="Отмена" Click="Cancel_Click"/>
-    <Button Content="Сохранить" IsDefault="True" Background="#245BCC" Foreground="White" Click="Save_Click"/>
-   </StackPanel>
-  </Grid>
- </Grid>
+<?xml version="1.0" ?>
+<Window xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" x:Class="NGraph.Views.NGraphSettingsView" Style="{DynamicResource {x:Type Window}}" WindowStartupLocation="CenterOwner" Title="NGraph — Настройки" Width="860" Height="650" MinWidth="680" MinHeight="520" PreviewKeyDown="Window_PreviewKeyDown">
+    <Window.Resources>
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <ResourceDictionary Source="DialogStyles.xaml"/>
+            </ResourceDictionary.MergedDictionaries>
+        </ResourceDictionary>
+    </Window.Resources>
+    <Grid Margin="24">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+        <StackPanel Margin="0,0,0,20">
+            <TextBlock Text="Настройки" FontSize="28" FontWeight="SemiBold"/>
+            <TextBlock x:Name="ProjectName" Margin="0,6,0,0" TextWrapping="Wrap" Foreground="#52627A"/>
+        </StackPanel>
+        <TabControl Grid.Row="1">
+            <TabItem Header="Базы данных">
+                <ScrollViewer VerticalScrollBarVisibility="Auto">
+                    <StackPanel Margin="20">
+                        <TextBlock Style="{StaticResource Body}" Text="Выберите чертёжные виды текущего проекта или введите имена для другого проекта. Настройки действуют для всех проектов этого пользователя."/>
+                        <Label Target="{Binding ElementName=ElementsView}" Content="База элементов"/>
+                        <ComboBox x:Name="ElementsView" IsEditable="True" ToolTip="Вид с готовыми графическими элементами"/>
+                        <Label Target="{Binding ElementName=FsaView}" Content="База функциональных схем" Margin="0,12,0,0"/>
+                        <ComboBox x:Name="FsaView" IsEditable="True"/>
+                        <Label Target="{Binding ElementName=EquipmentView}" Content="База оборудования" Margin="0,12,0,0"/>
+                        <ComboBox x:Name="EquipmentView" IsEditable="True"/>
+                        <Button Content="Проверить виды" HorizontalAlignment="Left" Margin="0,18,0,0" Click="Check_Click"/>
+                    </StackPanel>
+                </ScrollViewer>
+            </TabItem>
+            <TabItem Header="Файлы">
+                <ScrollViewer VerticalScrollBarVisibility="Auto">
+                    <StackPanel Margin="20">
+                        <TextBlock Style="{StaticResource Heading}" Text="Папка соответствий INI"/>
+                        <TextBlock Style="{StaticResource Body}" Text="При построении схем по модели имя INI-файла сопоставляется с ADSK_Группирование, секция — с ADSK_Позиция, а ключ Symbol задаёт тип условного обозначения."/>
+                        <Label Target="{Binding ElementName=IniDirectory}" Content="Полный путь к папке"/>
+                        <TextBox x:Name="IniDirectory" TextWrapping="Wrap"/>
+                        <Button Content="Выбрать по INI-файлу…" HorizontalAlignment="Left" Margin="0,12,0,18" Click="Browse_Click"/>
+                        <TextBlock Style="{StaticResource Body}" Text="Укажите существующую папку. Если папки ещё нет, сначала создайте её в Проводнике. Файлы ищутся также во вложенных папках."/>
+                        <TextBlock Text="Файл пользовательских настроек" FontWeight="SemiBold"/>
+                        <TextBox x:Name="SettingsPath" IsReadOnly="True" BorderThickness="0" Background="Transparent" TextWrapping="Wrap" Margin="0,8,0,0"/>
+                    </StackPanel>
+                </ScrollViewer>
+            </TabItem>
+        </TabControl>
+        <TextBlock Grid.Row="2" x:Name="Status" TextWrapping="Wrap" Margin="0,12,0,12" Foreground="#324D70" AutomationProperties.LiveSetting="Polite"/>
+        <Grid Grid.Row="3">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition/>
+                <ColumnDefinition Width="Auto"/>
+            </Grid.ColumnDefinitions>
+            <Button Content="По умолчанию" HorizontalAlignment="Left" Click="Defaults_Click"/>
+            <StackPanel Grid.Column="1" Orientation="Horizontal">
+                <Button Content="Отмена" Click="Cancel_Click"/>
+                <Button Content="Сохранить" IsDefault="True" Background="#245BCC" Foreground="White" Click="Save_Click"/>
+            </StackPanel>
+        </Grid>
+    </Grid>
 </Window>
