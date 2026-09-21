@@ -1,59 +1,45 @@
-﻿namespace NGraph.Core;
+namespace NGraph.Core;
 
 /// <summary>
-/// Марка приходящего кабеля на стуктурной схеме
+/// Марка приходящего кабеля на структурной схеме.
 /// </summary>
 public class Marka_ID : Gabarit
 {
-    public FamilyInstance FamilyInstance { get; set; }
-    public FamilySymbol FamilySymbol { get;}
+    public FamilyInstance FamilyInstance { get; set; } = null!;
+    public FamilySymbol FamilySymbol { get; }
 
-    //public int indexBlockDiagramId { get; set; } = 0;
-    public int indexBlockDiagramBaseEqupment { get; set; } = 0;
-    public int indexBlockDiagramCircuitId { get; set; } = 0;
-    public int indexGroupSymbol { get; set; } = 0;
+    public int indexBlockDiagramBaseEqupment { get; set; }
+    public int indexBlockDiagramCircuitId { get; set; }
+    public int indexGroupSymbol { get; set; }
 
     /// <summary>
-    /// Определяет видимость марки
+    /// Определяет видимость марки.
     /// </summary>
-    public bool IsSet {  get; set; } = false;
+    public bool IsSet { get; set; }
 
-    public Orientation Orientation { get;} 
+    public Orientation Orientation { get; }
 
-
-
-    public Marka_ID(Document doc, View view, Orientation Orientation)
+    public Marka_ID(Document doc, View view, Orientation orientation)
     {
-        FamilySymbol = GetSymbol_OST_DetailComponents_ViewBased(doc, Orientation);
-        this.Orientation = Orientation;
-        //deltaXYZ = GetGabarit(FamilySymbol, view)*0.1;
+        ArgumentNullException.ThrowIfNull(doc);
+        ArgumentNullException.ThrowIfNull(view);
+
+        Orientation = orientation;
+        FamilySymbol = GetSymbol(doc, orientation)
+            ?? throw new InvalidOperationException(
+                $"Не найдено видовое семейство марки '{orientation}' в категории Detail Components.");
+
         deltaXYZ = GetGabarit(FamilySymbol, view);
-
     }
 
-
-    FamilySymbol GetSymbol_OST_DetailComponents_ViewBased(Document document, Orientation Name)
+    private static FamilySymbol? GetSymbol(Document document, Orientation orientation)
     {
-        FamilySymbol symbol = null;
-        FilteredElementCollector fsCollector = new FilteredElementCollector(document);
-        fsCollector.OfClass(typeof(FamilySymbol)).OfCategory(BuiltInCategory.OST_DetailComponents);
-        ICollection<Element> collection = fsCollector.ToElements();
-        foreach (Element element in collection)
-        {
-            FamilySymbol current = element as FamilySymbol;
-
-            if (current.Family.FamilyPlacementType == FamilyPlacementType.ViewBased & current.Name == Name.ToString())
-            {
-                symbol = current;
-                break;
-            }
-        }
-
-        return symbol;
+        return new FilteredElementCollector(document)
+            .OfClass(typeof(FamilySymbol))
+            .OfCategory(BuiltInCategory.OST_DetailComponents)
+            .Cast<FamilySymbol>()
+            .FirstOrDefault(symbol =>
+                symbol.Family.FamilyPlacementType == FamilyPlacementType.ViewBased &&
+                symbol.Name == orientation.ToString());
     }
-
-
-
-
-
 }
