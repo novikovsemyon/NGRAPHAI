@@ -17,9 +17,21 @@ public class NumberingView : ExternalCommand
 {
     public override void Execute()
     {
+        var sheets = UiDocument.Selection.GetElementIds()
+            .Select(Document.GetElement)
+            .OfType<ViewSheet>()
+            .OrderBy(sheet => sheet.SheetNumber, new NaturalStringComparer())
+            .ToList();
+        if (sheets.Count == 0)
+        {
+            TaskDialog.Show("NGraph", "Выберите листы в диспетчере проекта перед запуском нумерации.");
+            return;
+        }
+
         var viewModel = new NGraphNumberingSheetsViewModel
         {
-            Doc = Document
+            Doc = Document,
+            Sheets = sheets
         };
 
         var viewWindow = new NGraphNumberingSheetsView(viewModel);
@@ -36,50 +48,50 @@ public class NumberingView : ExternalCommand
             return;
         }
 
-        var selectedElementIds = UiDocument.Selection.GetElementIds();
-        if (selectedElementIds.Count == 0)
+        if (!int.TryParse(viewWindow.TB_Value.Text, out var page) || page <= 0 ||
+            (long)page + sheets.Count - 1 > int.MaxValue)
         {
-            TaskDialog.Show("NGraph", "Не выбраны листы для нумерации.");
+            TaskDialog.Show("NGraph", "Укажите положительный начальный номер в допустимом диапазоне.");
             return;
         }
 
-        var page = int.TryParse(viewWindow.TB_Value.Text, out var parsedPage) && parsedPage > 0
-            ? parsedPage
-            : 1;
         var pageNumberSheet = 1;
-
-        var sortedSelectedElementIds = selectedElementIds
-            .OrderBy(
-                id => NgContext._FindParameter(Document.GetElement(id), BuiltInParameter.SHEET_NUMBER)?.AsString() ?? string.Empty,
-                new NaturalStringComparer())
-            .ToList();
 
         using var transaction = new Transaction(Document, "NGraph: нумерация листов");
         transaction.Start();
 
         try
         {
-            foreach (var elementId in sortedSelectedElementIds)
+            // Revit requires unique sheet numbers even during a renumbering operation.
+            if (selectedParameter.Id == new ElementId(BuiltInParameter.SHEET_NUMBER))
             {
-                var element = Document.GetElement(elementId);
-                if (element is null)
+                var temporaryPrefix = "NGraph-" + Guid.NewGuid().ToString("N") + "-";
+                for (var i = 0; i < sheets.Count; i++)
                 {
-                    continue;
+                    sheets[i].SheetNumber = temporaryPrefix + i;
                 }
+            }
+
+            foreach (var element in sheets)
+            {
 
                 var pageParameter = NgContext._FindParameter(element, selectedParameter.Definition.Name);
                 var sheetNumberParameter = NgContext._FindParameter(element, "Номер листа для выпуска");
 
                 if (pageParameter is null || pageParameter.IsReadOnly)
                 {
-                    continue;
+                    throw new InvalidOperationException(
+                        $"На листе «{element.Name}» параметр «{selectedParameter.Definition.Name}» отсутствует или недоступен для записи.");
                 }
 
-                pageParameter.Set(page.ToString());
+                SetNumber(pageParameter, page);
 
                 if (sheetNumberParameter is { IsReadOnly: false })
                 {
-                    sheetNumberParameter.Set(pageNumberSheet.ToString());
+                    if (sheetNumberParameter.Id != pageParameter.Id)
+                    {
+                        SetNumber(sheetNumberParameter, pageNumberSheet);
+                    }
                 }
 
                 page++;
@@ -92,6 +104,27 @@ public class NumberingView : ExternalCommand
         {
             transaction.RollBack();
             TaskDialog.Show("NGraph", $"Ошибка нумерации листов:\n{exception.Message}");
+        }
+    }
+
+    private static void SetNumber(Parameter parameter, int value)
+    {
+        if ((parameter.StorageType == StorageType.String && parameter.AsString() == value.ToString()) ||
+            (parameter.StorageType == StorageType.Integer && parameter.AsInteger() == value))
+        {
+            return;
+        }
+
+        var updated = parameter.StorageType switch
+        {
+            StorageType.String => parameter.Set(value.ToString()),
+            StorageType.Integer => parameter.Set(value),
+            _ => throw new InvalidOperationException(
+                $"Параметр «{parameter.Definition.Name}» должен быть текстовым или целочисленным.")
+        };
+        if (!updated)
+        {
+            throw new InvalidOperationException($"Не удалось записать параметр «{parameter.Definition.Name}».");
         }
     }
 
