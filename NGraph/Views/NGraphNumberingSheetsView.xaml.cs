@@ -8,7 +8,7 @@ namespace NGraph.Views;
 
 public sealed partial class NGraphNumberingSheetsView
 {
-    public Object Cancel { get; set; }
+    public bool Cancel { get; private set; } = true;
     IList<Element> Elements { get; set; } 
     public int Selector { get; set; } = 0;
     public NGraphNumberingSheetsView(NGraphNumberingSheetsViewModel viewModel)
@@ -17,7 +17,6 @@ public sealed partial class NGraphNumberingSheetsView
         Helpers helpers = new Helpers();
         Elements = new FilteredElementCollector(viewModel.Doc).OfCategory(BuiltInCategory.OST_ElectricalEquipment).WhereElementIsNotElementType().ToElements();
         InitializeComponent();
-        this.Closing += Window_Closing;
 // var GenericAnnotation = helpers.AllElementsOfCategory(viewModel.Doc, BuiltInCategory.OST_GenericAnnotation).ToList(); //Типовые аннотации
  
 
@@ -45,17 +44,11 @@ public sealed partial class NGraphNumberingSheetsView
         
     }
 
-           private void Window_Closing(object sender, System.ComponentModel.CancelEventArgs e)
-        {
-            Cancel = true;
-            e.Cancel = false;
-        }
-
 
         private void Confirm_Click(object sender, System.Windows.RoutedEventArgs e)
         {
-            Close();
             Cancel = false;
+            Close();
         }
 
         private void Value_TextChanged(object sender, System.Windows.Controls.TextChangedEventArgs e)
