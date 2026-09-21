@@ -33,13 +33,10 @@ public class Application : ExternalApplication
         buttonInfo.SetImage("/NGraph;component/Resources/Icons/NG_info_16.png");
         buttonInfo.SetLargeImage("/NGraph;component/Resources/Icons/NG_info_32.png");
         
-#if REVIT2019_OR_GREATER
         var buttonSetting = panelCom.AddPushButton<NGraphSettings>("Настройки");
         buttonSetting.SetImage("/NGraph;component/Resources/Icons/NG_settings_16.png");
         buttonSetting.SetLargeImage("/NGraph;component/Resources/Icons/NG_settings_32.png");
-#endif
         #endregion
-#if REVIT2019_OR_GREATER
         #region Листы
         var panelSheets = Application.CreateRibbonPanel(nGraph, "Листы");
         var buttonPrint = panelSheets.AddPushButton<PrintTo>("Экспорт");
@@ -101,7 +98,6 @@ public class Application : ExternalApplication
        
         
         #endregion
-#endif
         #region  ФСА
         var pdnelFsa = Application.CreateRibbonPanel(nGraph, "Схемы автоматизации");
         var buttonCreateFsa = pdnelFsa.AddPushButton<AlgoritmCreateFootor>("ФСА\nпо группам");
@@ -127,7 +123,6 @@ public class Application : ExternalApplication
        
         #endregion
         
-#if REVIT2019_OR_GREATER 
         #region  Схемы по воздуховодам
         var panelDuctSystems = Application.CreateRibbonPanel(nGraph, "Схемы по воздуховодам и цепям");
         var buttomCreateStructShemaByMechanicalDuctSystemsAndCircuit =
@@ -151,7 +146,6 @@ public class Application : ExternalApplication
 
         #endregion
         
-#endif   
     
     }
 }
