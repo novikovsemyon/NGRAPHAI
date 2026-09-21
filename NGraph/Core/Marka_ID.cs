@@ -21,8 +21,8 @@ public class Marka_ID : Gabarit
 
     public Marka_ID(Document doc, View view, Orientation orientation)
     {
-        ArgumentNullException.ThrowIfNull(doc);
-        ArgumentNullException.ThrowIfNull(view);
+        if (doc is null) throw new ArgumentNullException(nameof(doc));
+        if (view is null) throw new ArgumentNullException(nameof(view));
 
         Orientation = orientation;
         FamilySymbol = GetSymbol(doc, orientation)
