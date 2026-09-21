@@ -20,7 +20,7 @@ public static class NgContext
         if (elementTypeId == ElementId.InvalidElementId) return null;
 
         var elementType = element.Document.GetElement(elementTypeId);
-        return elementType.LookupParameter(parameter);
+        return elementType?.LookupParameter(parameter);
     }
     public static Parameter? _FindParameter(Element element, BuiltInParameter parameter)
     {
@@ -31,7 +31,7 @@ public static class NgContext
         if (elementTypeId == ElementId.InvalidElementId) return null;
 
         var elementType = element.Document.GetElement(elementTypeId);
-        return elementType.get_Parameter(parameter);
+        return elementType?.get_Parameter(parameter);
     }
     #endif
             
