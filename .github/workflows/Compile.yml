@@ -24,6 +24,9 @@ jobs:
           key: ${{ runner.os }}-nuget-${{ hashFiles('**/*.csproj', 'Directory.Build.props', 'Directory.Packages.props') }}
           restore-keys: ${{ runner.os }}-nuget-
 
+      - name: Test settings persistence
+        run: dotnet run --project tests/NGraph.Settings.Tests -c Release
+
       - name: Compile solution
         run: dotnet run -c Release
         working-directory: "build"

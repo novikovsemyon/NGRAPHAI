@@ -18,14 +18,17 @@ public sealed class UserSettings
     public static UserSettings Load() => Load(out _);
 
     /// <summary>Отсутствие файла означает первый запуск; повреждение возвращается в интерфейс как предупреждение.</summary>
-    public static UserSettings Load(out string warning)
+    public static UserSettings Load(out string warning) => LoadFrom(FilePath, out warning);
+
+    // Отдельный путь позволяет проверять хранение на временных файлах, не затрагивая настройки пользователя.
+    internal static UserSettings LoadFrom(string filePath, out string warning)
     {
         warning = string.Empty;
         var defaults = new UserSettings();
-        if (!File.Exists(FilePath)) return defaults;
+        if (!File.Exists(filePath)) return defaults;
         try
         {
-            var root = XDocument.Load(FilePath).Root;
+            var root = XDocument.Load(filePath).Root;
             if (root?.Name != "NGraphSettings") throw new InvalidDataException("Неверный формат настроек.");
             defaults.ElementsView = Read(root, nameof(ElementsView), defaults.ElementsView);
             defaults.FsaView = Read(root, nameof(FsaView), defaults.FsaView);
@@ -46,17 +49,19 @@ public sealed class UserSettings
     }
 
     /// <summary>Сначала записываем временный файл: неудачная запись не повреждает предыдущие настройки.</summary>
-    public void Save()
+    public void Save() => SaveTo(FilePath);
+
+    internal void SaveTo(string filePath)
     {
-        Directory.CreateDirectory(Path.GetDirectoryName(FilePath)!);
-        var temporary = FilePath + "." + Guid.NewGuid().ToString("N") + ".tmp";
+        Directory.CreateDirectory(Path.GetDirectoryName(filePath)!);
+        var temporary = filePath + "." + Guid.NewGuid().ToString("N") + ".tmp";
         try
         {
             new XDocument(new XElement("NGraphSettings",
                 new XElement(nameof(ElementsView), ElementsView), new XElement(nameof(FsaView), FsaView),
                 new XElement(nameof(EquipmentView), EquipmentView), new XElement(nameof(IniDirectory), IniDirectory))).Save(temporary);
-            if (File.Exists(FilePath)) File.Replace(temporary, FilePath, null);
-            else File.Move(temporary, FilePath);
+            if (File.Exists(filePath)) File.Replace(temporary, filePath, null);
+            else File.Move(temporary, filePath);
         }
         finally
         {
