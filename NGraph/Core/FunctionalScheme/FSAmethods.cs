@@ -36,21 +36,21 @@ namespace NGraph.Core.FunctionalScheme;
            .Where(k => k.Pinned == false)
            .Select(i => i.Id).ToList();
          */
-         using (Transaction tr = new Transaction(doc, $"Удаление незакрепленных элементов"))
+         using (Transaction tr = new Transaction(doc, "Удаление незакрепленных элементов"))
          {
-             var extention = true;
              tr.Start();
              try
              {
                  //doc.Delete(elementsTAG_where_is_not_Pinned);//Сначала удаляем марки
                  doc.Delete(elements_where_is_not_Pinned);
-
-
+                 tr.Commit();
+                 return true;
              }
-             catch { extention = false; }
-             tr.Commit();
-             return extention;
-
+             catch
+             {
+                 tr.RollBack();
+                 return false;
+             }
          }
      }
 
@@ -80,21 +80,21 @@ namespace NGraph.Core.FunctionalScheme;
            .Where(k => k.Pinned == false)
            .Select(i => i.Id).ToList();
          */
-         using (Transaction tr = new Transaction(doc, $"Удаление футора "))
+         using (Transaction tr = new Transaction(doc, "Удаление футора"))
          {
-             var extention = true;
              tr.Start();
              try
              {
                  //doc.Delete(elementsTAG_where_is_not_Pinned);//Сначала удаляем марки
                  doc.Delete(elements);
-
-
+                 tr.Commit();
+                 return true;
              }
-             catch { extention = false; }
-             tr.Commit();
-             return extention;
-
+             catch
+             {
+                 tr.RollBack();
+                 return false;
+             }
          }
      }
 
@@ -247,7 +247,6 @@ namespace NGraph.Core.FunctionalScheme;
 
          using (Transaction tr = new Transaction(doc, $"Создание элементов футора"))
          {
-             var extention = true;
              tr.Start();
              try
              {
@@ -278,10 +277,13 @@ namespace NGraph.Core.FunctionalScheme;
                      footerInstance.LookupParameter(Const.Param_NS_LinghtOfFooter)?.Set(index);
                  }
 
+                 tr.Commit();
              }
-             catch { }
-             tr.Commit();
-             
+             catch
+             {
+                 tr.RollBack();
+                 throw;
+             }
          }
          
 
@@ -328,9 +330,7 @@ namespace NGraph.Core.FunctionalScheme;
      {
          List<FSAfooter> fSAfootors = new List<FSAfooter>();
 
-         List<string> fsaStrings = [];
-
-         var groupedHeaders = fSAelementOfHeaderStructs.GroupBy(i => i.Group).ToList();
+          var groupedHeaders = fSAelementOfHeaderStructs.GroupBy(i => i.Group).ToList();
          if (groupedHeaders.Count != xyz.Count)
          {
              return fSAfootors;
@@ -341,8 +341,7 @@ namespace NGraph.Core.FunctionalScheme;
          {
              
              string group = fsastruct.Key; //Имя группы
-             fsaStrings.Add(group);
-             FSAfooter footor = FootorCreate(doc, xyz[count]); //Количество футоров совпадает с количеством групп
+              FSAfooter footor = FootorCreate(doc, xyz[count]); //Количество футоров совпадает с количеством групп
              footor.Group = group; //присваиваем группе футора то же имя что и на структурной схеме
 
              fSAfootors.Add(footor);
