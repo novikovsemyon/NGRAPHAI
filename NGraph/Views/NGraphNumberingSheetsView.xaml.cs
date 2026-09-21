@@ -1,170 +1,75 @@
-﻿using System.Windows.Controls;
-using System.Windows.Navigation;
-using NGraph.Core;
+using System.Windows;
+using System.Windows.Controls;
+using System.Windows.Input;
 using NGraph.ViewModels;
-using Nice3point.Revit.Extensions.Runtime;
 
 namespace NGraph.Views;
 
 public sealed partial class NGraphNumberingSheetsView
 {
-    public Object Cancel { get; set; }
-    IList<Element> Elements { get; set; } 
-    public int Selector { get; set; } = 0;
+    public bool Cancel { get; private set; } = true;
+    private readonly IList<ViewSheet> _sheets;
+
     public NGraphNumberingSheetsView(NGraphNumberingSheetsViewModel viewModel)
     {
         DataContext = viewModel;
-        Helpers helpers = new Helpers();
-        Elements = new FilteredElementCollector(viewModel.Doc).OfCategory(BuiltInCategory.OST_ElectricalEquipment).WhereElementIsNotElementType().ToElements();
+        _sheets = viewModel.Sheets;
         InitializeComponent();
-        this.Closing += Window_Closing;
-// var GenericAnnotation = helpers.AllElementsOfCategory(viewModel.Doc, BuiltInCategory.OST_GenericAnnotation).ToList(); //Типовые аннотации
- 
 
+        var parameters = _sheets
+            .SelectMany(sheet => sheet.Parameters.Cast<Parameter>())
+            .Where(parameter => !parameter.IsReadOnly &&
+                (parameter.StorageType == StorageType.String || parameter.StorageType == StorageType.Integer))
+            .GroupBy(parameter => parameter.Definition.Name)
+            .Select(group => group.First())
+            .OrderBy(parameter => parameter.Definition.Name)
+            .ToList();
 
-
-        List<Parameter> parameters = new List<Parameter>();
-        List<Parameter> parametersOfType = new List<Parameter>();
-
-        foreach (var e in Elements)
-        {
-            GetParemeterList_Instance_And_Type(e.ParametersMap, ref parameters);
-            //GetParemeterList_Instance_And_Type((e as FamilyInstance).Symbol.ParametersMap, ref parametersOfType);
-
-
-        }
-
-        CB_Param.ItemsSource = parameters.OrderBy(i => i.Definition.Name);
         CB_Param.DisplayMemberPath = "Definition.Name";
-        CB_Param.SelectedItem = parameters.Where(i=>i.Definition.Name == "CISP_Номер страницы для выпуска").FirstOrDefault();
-
-
-        //TB_Value = 
-
-        
-        
+        CB_Param.ItemsSource = parameters;
+        CB_Param.SelectedItem = parameters.FirstOrDefault(parameter =>
+            parameter.Definition.Name == "CISP_Номер страницы для выпуска") ?? parameters.FirstOrDefault();
+        Confirm.IsEnabled = parameters.Count > 0;
     }
 
-           private void Window_Closing(object sender, System.ComponentModel.CancelEventArgs e)
+    private void Confirm_Click(object sender, RoutedEventArgs e)
+    {
+        if (CB_Param.SelectedItem is not Parameter ||
+            !int.TryParse(TB_Value.Text, out var start) || start <= 0 ||
+            (long)start + _sheets.Count - 1 > int.MaxValue)
         {
-            Cancel = true;
-            e.Cancel = false;
+            MessageBox.Show(this, "Выберите параметр и укажите положительный начальный номер в допустимом диапазоне.",
+                "NGraph", MessageBoxButton.OK, MessageBoxImage.Information);
+            return;
+        }
+        Cancel = false;
+        Close();
+    }
+
+    private void CB_Param_SelectionChanged(object sender, SelectionChangedEventArgs e)
+    {
+        if (CB_Param.SelectedItem is not Parameter parameter)
+        {
+            CB_Value.ItemsSource = null;
+            return;
         }
 
+        CB_Value.ItemsSource = _sheets
+            .Select(sheet => sheet.LookupParameter(parameter.Definition.Name))
+            .Where(value => value is not null)
+            .Select(value => value.StorageType == StorageType.String ? value.AsString() : value.AsValueString())
+            .Where(value => !string.IsNullOrWhiteSpace(value))
+            .Distinct()
+            .OrderBy(value => value)
+            .ToList();
+        CB_Value.SelectedIndex = 0;
+    }
 
-        private void Confirm_Click(object sender, System.Windows.RoutedEventArgs e)
-        {
-            Close();
-            Cancel = false;
-        }
+    private void CB_Value_SelectionChanged(object sender, SelectionChangedEventArgs e) { }
+    private void TextBox_TextChanged(object sender, TextChangedEventArgs e) { }
 
-        private void Value_TextChanged(object sender, System.Windows.Controls.TextChangedEventArgs e)
-        {
-            
-        }
-
-        private void Param_TextChanged(object sender, System.Windows.Controls.TextChangedEventArgs e)
-        {
-            
-        }
-
-        /// <summary>
-        /// Список всех возможных значений для элементов у определенного параметра
-        /// </summary>
-        /// <param name="elements"></param>
-        /// <param name="parameter"></param>
-        /// <returns></returns>
-        private List<string> GetSrtingLists_forCheckBox(IList<Element> elements, Parameter parameter)
-        {
-            var def = parameter.Definition;
-            List<string> list = [];
-            foreach (var element in elements)
-            {
-                //var elementOFType = (element as FamilyInstance).Symbol;
-                string item_s;
-                try
-                {
-#if REVIT2022_OR_GREATER
-                item_s = element.FindParameter(def.Name).AsValueString();
-#else
-                    item_s = element.LookupParameter(def.Name).AsString();
-#endif
-                    
-                }
-                catch
-                {
-                    item_s = "(null) for any Instaces";
-                }
-
-                if (item_s.IsNullOrEmpty() & list.Contains(item_s) == false)
-                { list.Add(item_s); }
-                else if (list.Contains(item_s))
-                { continue; }
-                else
-                { list.Add(item_s); }
-            }
-            list.RemoveAll(i => i.IsNullOrEmpty());
-            list.Sort();
-            if (list.Count == 0) { list.Add("(Empty)"); }
-            return list;
-        }
-
-        private void GetParemeterList_Instance_And_Type(ParameterMap parameterMap, ref List<Parameter> parameters)
-        {
-
-            foreach (var p in parameterMap)
-            {
-                Parameter parameter = p as Parameter;
-
-#if REVIT2022_OR_GREATER
-                var storageType = parameter.StorageType;
-#else
-                var storageType = parameter.StorageType;
-#endif
-
-                if (storageType == StorageType.String || storageType == StorageType.Integer || storageType == StorageType.Double)
-                {
-                    if (parameters.Any(i => i.Definition.Name == (p as Parameter).Definition.Name)) //Если уже есть в списке
-                    {
-                        continue;
-                    }
-                    else
-                    {
-                        parameters.Add(p as Parameter);
-                    }
-                }
-                else { continue; }
-
-            }
-
-
-        }
-
-        private void CB_Param_SelectionChanged(object sender, SelectionChangedEventArgs e)
-        {
-            var parameter = CB_Param.SelectedItem as Parameter;
-            CB_Value.ItemsSource = GetSrtingLists_forCheckBox(Elements, parameter);
-            CB_Value.SelectedIndex = 0;
-        }
-
-        private void CB_Value_SelectionChanged(object sender, SelectionChangedEventArgs e)
-        {
-
-        }
-
-        private void TextBox_TextChanged(object sender, TextChangedEventArgs e)
-        {
-            
-        }
-
-        private void TB_Value_PreviewTextInput(object sender, System.Windows.Input.TextCompositionEventArgs e)
-        {
-            e.Handled = !IsTextAllowed(e.Text);
-        }
-        private static bool IsTextAllowed(string text)
-        {
-            // Разрешены только цифры
-            return Array.TrueForAll<char>(text.ToCharArray(), char.IsDigit);
-        }
-    
+    private void TB_Value_PreviewTextInput(object sender, TextCompositionEventArgs e)
+    {
+        e.Handled = !e.Text.All(char.IsDigit);
+    }
 }

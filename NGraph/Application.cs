@@ -22,7 +22,7 @@ public class Application : ExternalApplication
         
         
         
-        String nGraph = "NGraph";
+        const string nGraph = "NGraph";
         Application.CreateRibbonTab(nGraph);
 
         
@@ -30,20 +30,17 @@ public class Application : ExternalApplication
         var panelCom = Application.CreateRibbonPanel(nGraph, "Общее");
         
         var buttonInfo = panelCom.AddPushButton<InfoCommand>("Инфо");
-        buttonInfo.SetLargeImage("/NGraph;component/Resources/Icons/NG_info_16.png");
+        buttonInfo.SetImage("/NGraph;component/Resources/Icons/NG_info_16.png");
         buttonInfo.SetLargeImage("/NGraph;component/Resources/Icons/NG_info_32.png");
         
-#if REVIT2019_OR_GREATER
         var buttonSetting = panelCom.AddPushButton<NGraphSettings>("Настройки");
         buttonSetting.SetImage("/NGraph;component/Resources/Icons/NG_settings_16.png");
         buttonSetting.SetLargeImage("/NGraph;component/Resources/Icons/NG_settings_32.png");
-#endif
         #endregion
-#if REVIT2019_OR_GREATER
         #region Листы
         var panelSheets = Application.CreateRibbonPanel(nGraph, "Листы");
         var buttonPrint = panelSheets.AddPushButton<PrintTo>("Экспорт");
-        buttonPrint.SetLargeImage("/NGraph;component/Resources/Icons/NG_printPDF_DWG_16.png");
+        buttonPrint.SetImage("/NGraph;component/Resources/Icons/NG_printPDF_DWG_16.png");
         buttonPrint.SetLargeImage("/NGraph;component/Resources/Icons/NG_printPDF_DWG_32.png");
         buttonPrint.LongDescription = "Печать работает при установленном принтере PDF-XChange Standard." +
                                       "Должен быть настроен хотя бы один набор печати в Revit." +
@@ -52,12 +49,12 @@ public class Application : ExternalApplication
                                       "Имя файла %[DocName]" +
                                       "Путь сохранения Документы/Экспорт из Revit";
         
-        var buttonSheetsNumbering = panelCom.AddPushButton<NumberingView>("Нумератор\nлистов");
-        buttonSheetsNumbering.SetLargeImage("/NGraph;component/Resources/Icons/NG_sheetsNumbering_16.png");
+        var buttonSheetsNumbering = panelSheets.AddPushButton<NumberingView>("Нумератор\nлистов");
+        buttonSheetsNumbering.SetImage("/NGraph;component/Resources/Icons/NG_sheetsNumbering_16.png");
         buttonSheetsNumbering.SetLargeImage("/NGraph;component/Resources/Icons/NG_sheetsNumbering_32.png");
         
-        var buttonSheetsFromDrafting = panelCom.AddPushButton<CreateViewSheetsByDraftingViewes>("Создать листы\nпо чертежам");
-        buttonSheetsFromDrafting.SetLargeImage("/NGraph;component/Resources/Icons/NG_sheetsFromDrafting_32.png");
+        var buttonSheetsFromDrafting = panelSheets.AddPushButton<CreateViewSheetsByDraftingViewes>("Создать листы\nпо чертежам");
+        buttonSheetsFromDrafting.SetImage("/NGraph;component/Resources/Icons/NG_sheetsFromDrafting_16.png");
         buttonSheetsFromDrafting.SetLargeImage("/NGraph;component/Resources/Icons/NG_sheetsFromDrafting_32.png");
 
         
@@ -78,30 +75,29 @@ public class Application : ExternalApplication
         var panelStruct = Application.CreateRibbonPanel(nGraph, "Структурные схемы по пространствам и параметрам");
         
         var buttonCreateSxemaByModel = panelStruct.AddPushButton<CreateSxemaByModel>("Менеджер\nсхем");
-        buttonCreateSxemaByModel.SetLargeImage("/NGraph;component/Resources/Icons/NG_structura_16.png");
+        buttonCreateSxemaByModel.SetImage("/NGraph;component/Resources/Icons/NG_structura_16.png");
         buttonCreateSxemaByModel.SetLargeImage("/NGraph;component/Resources/Icons/NG_structura_32.png");
         
         var buttonCreateConnection = panelStruct.AddPushButton<CreateСonnectionsLineOnViewDrafting>("Расставить\nкабель");
-        buttonCreateConnection.SetLargeImage("/NGraph;component/Resources/Icons/NG_cabel_16.png");
+        buttonCreateConnection.SetImage("/NGraph;component/Resources/Icons/NG_cabel_16.png");
         buttonCreateConnection.SetLargeImage("/NGraph;component/Resources/Icons/NG_cabel_32.png");
         
         var buttonCutLines = panelStruct.AddPushButton<CutLineOnViewDrafting>("Вырезать\nлинии");
-        buttonCutLines.SetLargeImage("/NGraph;component/Resources/Icons/NG_cut_16.png");
+        buttonCutLines.SetImage("/NGraph;component/Resources/Icons/NG_cut_16.png");
         buttonCutLines.SetLargeImage("/NGraph;component/Resources/Icons/NG_cut_32.png");
         
         var buttonCopyLinesToView = panelStruct.AddPushButton<CopyLinesToView>("Копировать\nкабель");
-        buttonCopyLinesToView.SetLargeImage("/NGraph;component/Resources/Icons/NG_copyCabel_16.png");
+        buttonCopyLinesToView.SetImage("/NGraph;component/Resources/Icons/NG_copyCabel_16.png");
         buttonCopyLinesToView.SetLargeImage("/NGraph;component/Resources/Icons/NG_copyCabel_32.png");
         
         
         var buttonSelectInModelByElementId = panelStruct.AddPushButton<SelectInModelByElementId>("Найти в\nмодели");
-        buttonSelectInModelByElementId.SetLargeImage("/NGraph;component/Resources/Icons/NG_find_16.png");
+        buttonSelectInModelByElementId.SetImage("/NGraph;component/Resources/Icons/NG_find_16.png");
         buttonSelectInModelByElementId.SetLargeImage("/NGraph;component/Resources/Icons/NG_find_32.png");
         
        
         
         #endregion
-#endif
         #region  ФСА
         var pdnelFsa = Application.CreateRibbonPanel(nGraph, "Схемы автоматизации");
         var buttonCreateFsa = pdnelFsa.AddPushButton<AlgoritmCreateFootor>("ФСА\nпо группам");
@@ -127,7 +123,6 @@ public class Application : ExternalApplication
        
         #endregion
         
-#if REVIT2019_OR_GREATER 
         #region  Схемы по воздуховодам
         var panelDuctSystems = Application.CreateRibbonPanel(nGraph, "Схемы по воздуховодам и цепям");
         var buttomCreateStructShemaByMechanicalDuctSystemsAndCircuit =
@@ -151,7 +146,6 @@ public class Application : ExternalApplication
 
         #endregion
         
-#endif   
     
     }
 }

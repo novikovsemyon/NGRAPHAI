@@ -90,7 +90,13 @@ public class CutLineOnViewDrafting : ExternalCommand
               var filteredGeometry = geometry.Where(i => i.GetType() == typeof(Line)); //Нужны только линии
               var filteredGeometry_solid = geometry.Where(i => i.GetType() == typeof(Solid)); //Нужны только линии
               List<XYZ> xYZsFoEqupment = [];
-              if (filteredGeometry.Any(i => line.Intersect((i as Curve)) == SetComparisonResult.Overlap)) //Если присутствуют пересечения линий
+#if REVIT2027
+              if (filteredGeometry.Any(i =>
+                      line.Intersect((Curve)i, CurveIntersectResultOption.Simple).Result == SetComparisonResult.Overlap))
+#else
+              if (filteredGeometry.Any(i => line.Intersect((Curve)i) == SetComparisonResult.Overlap))
+#endif
+              // Если присутствуют пересечения линий
               {
                   fi.Add(equpent.FI);
 
@@ -98,19 +104,24 @@ public class CutLineOnViewDrafting : ExternalCommand
                   foreach (Line l in filteredGeometry)
                   {
 
+#if REVIT2027
+                      var intersection = line.Intersect(l, CurveIntersectResultOption.Detailed);
+                      foreach (var overlapPoint in intersection.GetOverlaps())
+                      {
+                          xYZsFoEqupment.Add(overlapPoint.Point);
+                      }
+#else
                       IntersectionResultArray intersectionResultArray = [];
-                      var m = line.Intersect((l as Curve), out intersectionResultArray);
-
+                      line.Intersect(l, out intersectionResultArray);
 
                       if (intersectionResultArray != null)
                       {
-
-                          foreach (var i in intersectionResultArray)
+                          foreach (IntersectionResult intersectionResult in intersectionResultArray)
                           {
-                              XYZ crossPoint = (i as IntersectionResult).XYZPoint;
-                              xYZsFoEqupment.Add(crossPoint);
+                              xYZsFoEqupment.Add(intersectionResult.XYZPoint);
                           }
                       }
+#endif
                   }
 
 

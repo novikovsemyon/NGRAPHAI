@@ -13,7 +13,7 @@ public class FSAmodelCreateFromDb
     }
 
 
-    public Element GetBDfromModel(Document doc, string NameInBD)
+    public Element? GetBDfromModel(Document doc, string NameInBD)
     {
         Helpers helpers = new Helpers();
         var view = helpers.AllElementsOfCategory(doc, BuiltInCategory.OST_Views).Where(x => x.Name == NameInBD)
@@ -34,17 +34,19 @@ public class FSAmodelCreateFromDb
             
         if (view == null)
         {
-            TaskDialog.Show("Внимание", "Отсутствует чертежный вид с именем " + view.Name);
-            return null; 
+            TaskDialog.Show("Внимание", "Отсутствует чертежный вид базы элементов.");
+            return sections; 
         }
         var elements = Document.GetElements(view.Id);
             
-        var filledRegions = elements.ToList().Where(x => x.GetType() == typeof(FilledRegion)).ToList()
-            .Where(i => NgContext._FindParameter(i,"Тип").AsValueString().Contains("BD_")).ToList();
+        var filledRegions = elements
+            .OfType<FilledRegion>()
+            .Where(region => NgContext._FindParameter(region, "Тип")?.AsValueString()?.Contains("BD_") == true)
+            .ToList();
             
         foreach (var VARIABLE in filledRegions)
         {
-            sections.Add(new СекцияБазыДанных(VARIABLE as FilledRegion, view as View));
+            sections.Add(new СекцияБазыДанных(VARIABLE, view));
         }
             
         return sections;
@@ -61,7 +63,12 @@ public class FSAmodelCreateFromDb
     {
         //Все элементы с чертежного вида
 
-        var elements = document.GetElements(view?.Id);
+        if (view is null)
+        {
+            return;
+        }
+
+        var elements = document.GetElements(view.Id);
 
 
 
@@ -85,7 +92,7 @@ public class FSAmodelCreateFromDb
 
     
             
-        var elementsTag = document.GetElements(view?.Id)
+        var elementsTag = document.GetElements(view.Id)
             
             .Where(x => 
                 x.GetType() == typeof(IndependentTag)

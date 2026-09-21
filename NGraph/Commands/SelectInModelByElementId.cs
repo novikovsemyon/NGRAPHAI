@@ -1,32 +1,54 @@
-﻿using Autodesk.Revit.Attributes;
+using Autodesk.Revit.Attributes;
+using Autodesk.Revit.UI;
 using Nice3point.Revit.Toolkit.External;
 using NGraph.Core;
 
 namespace NGraph.Commands;
 
-/// <summary>
-///     External command entry point.
-/// </summary>
 [UsedImplicitly]
 [Transaction(TransactionMode.Manual)]
 public class SelectInModelByElementId : ExternalCommand
 {
     public override void Execute()
     {
-        List<Element> elements = Helpers.SelectElementsId(BuiltInCategory.OST_DetailComponents, UiDocument);
-        var filteredelements = elements.Where(i =>
-            int.TryParse(
+        List<Element> elements;
+        try
+        {
+            elements = Helpers.SelectElementsId(BuiltInCategory.OST_DetailComponents, UiDocument);
+        }
+        catch (Autodesk.Revit.Exceptions.OperationCanceledException)
+        {
+            return;
+        }
 
-                i.LookupParameter("NS_ElementId").AsString(),out _) 
- 
-        ).ToList();
-        var elementsId = filteredelements.ConvertAll
-        (
-            
-                (e=> new ElementId(int.Parse(e.LookupParameter("NS_ElementId").AsString())))
-        );
+        var elementIds = new HashSet<ElementId>();
+        foreach (var element in elements)
+        {
+            var parameter = element.LookupParameter("NS_ElementId");
+            if (parameter is null || parameter.StorageType != StorageType.String ||
+                !long.TryParse(parameter.AsString(), out var value) || value <= 0)
+            {
+                continue;
+            }
+#if REVIT2024_OR_GREATER
+            var id = new ElementId(value);
+#else
+            if (value > int.MaxValue) continue;
+            var id = new ElementId((int)value);
+#endif
+            if (Document.GetElement(id) is not null)
+            {
+                elementIds.Add(id);
+            }
+        }
 
-        UiDocument.Selection.SetElementIds(elementsId);
-        UiDocument.ShowElements(elementsId);
+        if (elementIds.Count == 0)
+        {
+            TaskDialog.Show("NGraph", "В выбранных элементах нет действующих ссылок NS_ElementId на элементы модели.");
+            return;
+        }
+
+        UiDocument.Selection.SetElementIds(elementIds);
+        UiDocument.ShowElements(elementIds);
     }
 }

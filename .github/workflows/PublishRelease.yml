@@ -11,6 +11,9 @@ on:
         required: false
         type: string
 
+permissions:
+  contents: write
+
 jobs:
   windows:
     name: windows-2025
@@ -42,5 +45,5 @@ jobs:
         working-directory: "build"
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          DOTNET_ENVIRONMENT: ${{ (github.ref_name == 'main' || github.ref_type == 'tag') && 'Production' || 'Development' }}
+          DOTNET_ENVIRONMENT: ${{ (github.ref_name == github.event.repository.default_branch || github.ref_type == 'tag') && 'Production' || 'Development' }}
           Build__Version: ${{ inputs.version || (github.ref_type == 'tag' && github.ref_name || '') }}
