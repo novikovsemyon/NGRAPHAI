@@ -35,7 +35,7 @@ public sealed class UserSettings
             defaults.EquipmentView = Read(root, nameof(EquipmentView), defaults.EquipmentView);
             defaults.IniDirectory = Read(root, nameof(IniDirectory), defaults.IniDirectory);
         }
-        catch (Exception ex) when (ex is IOException || ex is UnauthorizedAccessException || ex is System.Xml.XmlException)
+        catch (Exception ex) when (ex is IOException || ex is InvalidDataException || ex is UnauthorizedAccessException || ex is System.Xml.XmlException)
         {
             warning = "Не удалось прочитать настройки. Загружены стандартные значения. " + ex.Message;
         }
