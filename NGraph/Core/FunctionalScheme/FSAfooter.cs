@@ -31,7 +31,12 @@ public class FSAfooter: FSAentity
 
     public void Set_di_do_ai_ao_group(Document doc)
     {
-            
+        // Метод может вызываться повторно; пересчитываем значения с нуля.
+        Di = 0;
+        Do = 0;
+        Ai = 0;
+        Ao = 0;
+
         foreach (var grouped in FSAfooterGroupedElements)
         {
             foreach(var elenent in grouped.Elements)
@@ -44,13 +49,16 @@ public class FSAfooter: FSAentity
 
         }
 
-        var fi = doc.GetElement(ID);
+        if (doc.GetElement(ID) is not FamilyInstance fi)
+        {
+            return;
+        }
 
-        fi.get_Parameter(new Guid(Const.Param_NS_Di_guid)).Set(Di);
-        fi.get_Parameter(new Guid(Const.Param_NS_Do_guid)).Set(Do);
-        fi.get_Parameter(new Guid(Const.Param_NS_Ai_guid)).Set(Ai);
-        fi.get_Parameter(new Guid(Const.Param_NS_Ao_guid)).Set(Ao);
-        fi.LookupParameter(Const.Param_NS_Equpment).Set(Group);
+        fi.get_Parameter(new Guid(Const.Param_NS_Di_guid))?.Set(Di);
+        fi.get_Parameter(new Guid(Const.Param_NS_Do_guid))?.Set(Do);
+        fi.get_Parameter(new Guid(Const.Param_NS_Ai_guid))?.Set(Ai);
+        fi.get_Parameter(new Guid(Const.Param_NS_Ao_guid))?.Set(Ao);
+        fi.LookupParameter(Const.Param_NS_Equpment)?.Set(Group);
 
     }
 
