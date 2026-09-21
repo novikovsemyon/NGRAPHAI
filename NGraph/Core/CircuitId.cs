@@ -13,108 +13,89 @@ public class CircuitId
     /// <summary>
     /// Оборудование, подключенное к базовому элементу
     /// </summary>
-    public List<VertexId> VerticesFromBaseEquipment { get; set; }
-    public List<EQ> EQFromBaseEquipment { get; set; }
+    public List<VertexId> VerticesFromBaseEquipment { get; set; } = new List<VertexId>();
+    public List<EQ> EQFromBaseEquipment { get; set; } = new List<EQ>();
 
-    public string NSA_Цепь_комментарий { get; set; }
-    public string NSA_Цепь_назначение { get; set; }
+    public string NSA_Цепь_комментарий { get; set; } = string.Empty;
+    public string NSA_Цепь_назначение { get; set; } = string.Empty;
     public bool NSA_Цепь_звезда { get; set; }
 
     //REVIT PARAMS
-    public string Номер_слота { get; }
-    public string Номер_цепи { get; }
-    public string Имя_нагрузки { get; set; }
-    public string Имя_панели { get; }
-    public string Тип_системы { get; }
+    public string Номер_слота { get; } = string.Empty;
+    public string Номер_цепи { get; } = string.Empty;
+    public string Имя_нагрузки { get; set; } = string.Empty;
+    public string Имя_панели { get; } = string.Empty;
+    public string Тип_системы { get; } = string.Empty;
     public double Длина { get; }
     public int Количество_элементов { get; }
-    public string Комментарии { get; set; }
+    public string Комментарии { get; set; } = string.Empty;
     public ElectricalSystemType Тип { get; }
 
     //NSA PARAMS
-    public string NSA_Кабель_артикул { get; }
-    public string NSA_Кабель_производитель { get; }
-    public string NSA_Кабель_жилы_сечение { get; }
-    public string NSA_Кабель_комментарий { get; }
-    public string NSA_Кабель_марка { get; }
-    public string NSA_Кабель_наименование { get; }
+    public string NSA_Кабель_артикул { get; } = string.Empty;
+    public string NSA_Кабель_производитель { get; } = string.Empty;
+    public string NSA_Кабель_жилы_сечение { get; } = string.Empty;
+    public string NSA_Кабель_комментарий { get; } = string.Empty;
+    public string NSA_Кабель_марка { get; } = string.Empty;
+    public string NSA_Кабель_наименование { get; } = string.Empty;
     public int NSA_Цепь_внешн_диам { get; }
 
 
 
     public CircuitId(Element element, Document _doc)
     {
+        if (element is null) throw new ArgumentNullException(nameof(element));
+        if (_doc is null) throw new ArgumentNullException(nameof(_doc));
+        if (element is not ElectricalSystem electricalSystem)
+            throw new ArgumentException("Элемент должен быть электрической цепью.", nameof(element));
 
         Element = element;
-        FamilyInstance BE = (element as MEPSystem).BaseEquipment;
-        FI_BaseEquipment = BE;
-        ElementSet elementSet = new ElementSet();
-        elementSet = (element as MEPSystem).Elements;
-        foreach (var fi in elementSet)
+        FI_BaseEquipment = electricalSystem.BaseEquipment
+            ?? throw new InvalidOperationException($"У электрической цепи {element.Id} не назначено базовое оборудование.");
+
+        foreach (FamilyInstance familyInstance in electricalSystem.Elements.OfType<FamilyInstance>())
+            FI_FromBaseEquipment.Add(familyInstance);
+
+        NSA_Цепь_комментарий = ReadStringParameter(element, "NS_Цепь_комментарий");
+
+        var purposeParameter = element.LookupParameter("NS_Цепь_назначение");
+        var purposeElement = purposeParameter is null ? null : _doc.GetElement(purposeParameter.AsElementId());
+        NSA_Цепь_назначение = purposeElement?.Name ?? "!NO TYPE";
+
+        var starParameter = element.LookupParameter("NS_Цепь_звезда");
+        if (starParameter is null)
         {
-            FI_FromBaseEquipment.Add(fi as FamilyInstance);
+            NSA_Цепь_звезда = false;
+            TaskDialog.Show("Ошибка параметра", "Параметр NS_Цепь_звезда отсутствует. Использовано значение «Нет».");
+        }
+        else
+        {
+            NSA_Цепь_звезда = starParameter.AsInteger() != 0;
         }
 
-        ElementId elId = BE.Id;
-
-        
-
-
-
-        try { NSA_Цепь_комментарий = element.LookupParameter("NS_Цепь_комментарий").AsString(); }
-        catch { TaskDialog.Show("Ошибка параметра", "NS_Цепь_комментарий"); }
-        NSA_Цепь_назначение = "";
-        try { NSA_Цепь_назначение = _doc.GetElement(element.LookupParameter("NS_Цепь_назначение").AsElementId()).Name; }
-        catch { NSA_Цепь_назначение = "!NO TYPE"; }
-        try { NSA_Цепь_звезда = Convert.ToBoolean(element.LookupParameter("NS_Цепь_звезда").AsInteger()); }
-        catch
-        {
-            TaskDialog.Show("Ошибка параметра", "Проверьте NS_Цепь_звезда");
-            _doc.Close();
-        }
-
-
-
-        //Номер_слота = element.get_Parameter(BuiltInParameter.RBS_ELEC_CIRCUIT_SLOT_INDEX).AsString();
-        Номер_цепи = element.get_Parameter(BuiltInParameter.RBS_ELEC_CIRCUIT_NUMBER).AsString();
-        Имя_панели = element.get_Parameter(BuiltInParameter.RBS_ELEC_CIRCUIT_PANEL_PARAM).AsString();
-        Имя_нагрузки = element.get_Parameter(BuiltInParameter.RBS_ELEC_CIRCUIT_NAME).AsString();
-        Тип_системы = element.get_Parameter(BuiltInParameter.RBS_ELEC_CIRCUIT_TYPE).AsValueString();
-        Длина = element.get_Parameter(BuiltInParameter.RBS_ELEC_CIRCUIT_LENGTH_PARAM).AsDouble();
-        Количество_элементов = element.get_Parameter(BuiltInParameter.RBS_ELEC_CIRCUIT_NUMBER_OF_ELEMENTS_PARAM).AsInteger();
-        Комментарии = element.get_Parameter(BuiltInParameter.ALL_MODEL_INSTANCE_COMMENTS).AsString();
-        Тип = (element as ElectricalSystem).SystemType;
+        Номер_цепи = element.get_Parameter(BuiltInParameter.RBS_ELEC_CIRCUIT_NUMBER)?.AsString() ?? string.Empty;
+        Имя_панели = element.get_Parameter(BuiltInParameter.RBS_ELEC_CIRCUIT_PANEL_PARAM)?.AsString() ?? string.Empty;
+        Имя_нагрузки = element.get_Parameter(BuiltInParameter.RBS_ELEC_CIRCUIT_NAME)?.AsString() ?? string.Empty;
+        Тип_системы = element.get_Parameter(BuiltInParameter.RBS_ELEC_CIRCUIT_TYPE)?.AsValueString() ?? string.Empty;
+        Длина = element.get_Parameter(BuiltInParameter.RBS_ELEC_CIRCUIT_LENGTH_PARAM)?.AsDouble() ?? 0d;
+        Количество_элементов = element.get_Parameter(BuiltInParameter.RBS_ELEC_CIRCUIT_NUMBER_OF_ELEMENTS_PARAM)?.AsInteger() ?? 0;
+        Комментарии = element.get_Parameter(BuiltInParameter.ALL_MODEL_INSTANCE_COMMENTS)?.AsString() ?? string.Empty;
+        Тип = electricalSystem.SystemType;
 
         ReloadNS_parametrs_fromR2019_to2021(element, _doc);
 
+        NSA_Кабель_артикул = ReadStringParameter(element, "NS_Кабель_артикул");
+        NSA_Кабель_производитель = ReadStringParameter(element, "NS_Кабель_производитель");
+        NSA_Кабель_жилы_сечение = ReadStringParameter(element, "NS_Кабель_жилы_сечение");
+        NSA_Кабель_комментарий = ReadStringParameter(element, "NS_Кабель_комментарий");
+        NSA_Кабель_марка = ReadStringParameter(element, "NS_Кабель_марка");
+        NSA_Кабель_наименование = ReadStringParameter(element, "NS_Кабель_наименование");
+        NSA_Цепь_внешн_диам = element.LookupParameter("NS_Цепь_внешн.диам.мм.")?.AsInteger() ?? 0;
+    }
 
-
-        NSA_Кабель_артикул = element.LookupParameter("NS_Кабель_артикул").AsString();
-        NSA_Кабель_производитель = element.LookupParameter("NS_Кабель_производитель").AsString();
-        NSA_Кабель_жилы_сечение = element.LookupParameter("NS_Кабель_жилы_сечение").AsString();
-        NSA_Кабель_комментарий = element.LookupParameter("NS_Кабель_комментарий").AsString();
-        NSA_Кабель_марка = element.LookupParameter("NS_Кабель_марка").AsString();
-
-        NSA_Кабель_наименование = element.LookupParameter("NS_Кабель_наименование").AsString();
-        NSA_Цепь_внешн_диам = element.LookupParameter("NS_Цепь_внешн.диам.мм.").AsInteger();
-
-
-
-
-
-
-        /*
-        var selectFireAlarm = lElectricalCircuit.Where(x => (x as ElectricalSystem).SystemType == ElectricalSystemType.FireAlarm); //Пожарка
-        var selectNurseCall = lElectricalCircuit.Where(x => (x as ElectricalSystem).SystemType == ElectricalSystemType.NurseCall); //Вызов
-        var selectPowerBalanced = lElectricalCircuit.Where(x => (x as ElectricalSystem).SystemType == ElectricalSystemType.PowerBalanced); //Сбалансированная нагрузка
-        var selectPowerCircuit = lElectricalCircuit.Where(x => (x as ElectricalSystem).SystemType == ElectricalSystemType.PowerCircuit); //Мощность
-        var selectPowerUnBalanced = lElectricalCircuit.Where(x => (x as ElectricalSystem).SystemType == ElectricalSystemType.PowerUnBalanced); //Несбалансированная нагрузка
-        var selectSecurity = lElectricalCircuit.Where(x => (x as ElectricalSystem).SystemType == ElectricalSystemType.Security); //Безопасность
-        var selectTelephone = lElectricalCircuit.Where(x => (x as ElectricalSystem).SystemType == ElectricalSystemType.Telephone); //Телефон
-        var selectUndefinedSystemType = lElectricalCircuit.Where(x => (x as ElectricalSystem).SystemType == ElectricalSystemType.UndefinedSystemType); //нет системы (сломана не подключена)
-        */
-
-
+    private static string ReadStringParameter(Element element, string parameterName)
+    {
+        return element.LookupParameter(parameterName)?.AsString() ?? string.Empty;
     }
 
     /// <summary>
@@ -130,21 +111,27 @@ public class CircuitId
         var lElectricalCircuit = helpers.AllElementsOfCategory(_doc, builtInCategory);
         foreach (var item in lElectricalCircuit)
         {
+            if (item is not ElectricalSystem electricalSystem || electricalSystem.BaseEquipment is null)
+                continue;
+
+            var vertexId = GraphId.GetVertexId(graphId, electricalSystem.BaseEquipment.Id);
+            if (vertexId is null)
+                continue;
+
             CircuitId circuit = new CircuitId(item, _doc);
-            FamilyInstance BaseEquipment = (item as MEPSystem).BaseEquipment;
-            ElementId elId = BaseEquipment.Id;
-            if (GraphId.GetVertexId(graphId, elId) == null) { continue; }
-            VertexId vertexId = GraphId.GetVertexId(graphId, elId);
-            List<ElementId> listElId = new List<ElementId>();
             List<VertexId> listVertxId = new List<VertexId>();
             List<EQ> listEQ = new List<EQ>();
-            foreach (var l in (item as MEPSystem).Elements)
+
+            foreach (FamilyInstance familyInstance in electricalSystem.Elements.OfType<FamilyInstance>())
             {
-                listElId.Add((l as FamilyInstance).Id);
-                var vertexid = GraphId.GetVertexId(graphId, (l as FamilyInstance).Id);
-                listVertxId.Add(vertexid);
-                listEQ.Add(vertexid.eQ);
+                var connectedVertex = GraphId.GetVertexId(graphId, familyInstance.Id);
+                if (connectedVertex is null)
+                    continue;
+
+                listVertxId.Add(connectedVertex);
+                listEQ.Add(connectedVertex.eQ);
             }
+
             circuit.BaseEquipment = vertexId;
             circuit.VerticesFromBaseEquipment = listVertxId;
             circuit.EQFromBaseEquipment = listEQ;
@@ -160,48 +147,54 @@ public class CircuitId
     /// </summary>
     void ReloadNS_parametrs_fromR2019_to2021(Element element, Document _doc)
     {
-
-        using (Transaction tr = new Transaction(_doc, "Перезапись параметра по цепи"))
+        Transaction? transaction = null;
+        try
         {
-            tr.Start();
-            try
+            if (!_doc.IsModifiable)
             {
-                if (element.LookupParameter("NS_Кабель_артикул").IsReadOnly == false)
-                    element.LookupParameter("NS_Кабель_артикул").Set(element.LookupParameter("ПП_NS_Кабель_артикул").AsString());
-                if (element.LookupParameter("NS_Кабель_производитель").IsReadOnly == false)
-                    element.LookupParameter("NS_Кабель_производитель").Set(element.LookupParameter("ПП_NS_Кабель_производитель").AsString());
-                if (element.LookupParameter("NS_Кабель_комментарий").IsReadOnly == false)
-                    element.LookupParameter("NS_Кабель_комментарий").Set(element.LookupParameter("ПП_NS_Кабель_комментарий").AsString());
-                if (element.LookupParameter("NS_Кабель_марка").IsReadOnly == false)
-                    element.LookupParameter("NS_Кабель_марка").Set(element.LookupParameter("ПП_NS_Кабель_марка").AsString());
-                if (element.LookupParameter("NS_Кабель_наименование").IsReadOnly == false)
-                    element.LookupParameter("NS_Кабель_наименование").Set(element.LookupParameter("ПП_NS_Кабель_наименование").AsString());
-                
-                if (element.LookupParameter("NS_Цепь_внешн.диам.мм.").IsReadOnly == false)
-                {
-                    string s = element.LookupParameter("ПП_NS_Цепь_внешн.диам.мм").AsString();
-                    int result = 0;
-                    bool res = int.TryParse(s, out result);
-                    if (res) { element.LookupParameter("NS_Цепь_внешн.диам.мм.").Set(result); }
-                    else { element.LookupParameter("NS_Цепь_внешн.диам.мм.").Set(0); }
-                   
-                }
-                    
-                
-                if (element.LookupParameter("NS_Кабель_жилы_сечение").IsReadOnly == false)
-                    element.LookupParameter("NS_Кабель_жилы_сечение").Set(element.LookupParameter("ПП_NS_Кабель_жилы_сечение").AsString());
-
-
+                transaction = new Transaction(_doc, "Перезапись параметра по цепи");
+                transaction.Start();
             }
-            catch { TaskDialog.Show("Ошибка", "Перезапись параметра по цепи (ReloadNS_parametrs_fromR2019_to2021)"); }
-            tr.Commit();
+
+            CopyStringParameter(element, "ПП_NS_Кабель_артикул", "NS_Кабель_артикул");
+            CopyStringParameter(element, "ПП_NS_Кабель_производитель", "NS_Кабель_производитель");
+            CopyStringParameter(element, "ПП_NS_Кабель_комментарий", "NS_Кабель_комментарий");
+            CopyStringParameter(element, "ПП_NS_Кабель_марка", "NS_Кабель_марка");
+            CopyStringParameter(element, "ПП_NS_Кабель_наименование", "NS_Кабель_наименование");
+            CopyStringParameter(element, "ПП_NS_Кабель_жилы_сечение", "NS_Кабель_жилы_сечение");
+
+            var diameterTarget = element.LookupParameter("NS_Цепь_внешн.диам.мм.");
+            var diameterSource = element.LookupParameter("ПП_NS_Цепь_внешн.диам.мм");
+            if (diameterTarget is not null && !diameterTarget.IsReadOnly && diameterSource is not null)
+            {
+                int.TryParse(diameterSource.AsString(), out var diameter);
+                diameterTarget.Set(diameter);
+            }
+
+            if (transaction?.GetStatus() == TransactionStatus.Started)
+                transaction.Commit();
         }
+        catch (Exception ex)
+        {
+            if (transaction?.GetStatus() == TransactionStatus.Started)
+                transaction.RollBack();
 
+            TaskDialog.Show("Ошибка", "Не удалось перезаписать параметры цепи.\n" + ex.Message);
+        }
+        finally
+        {
+            transaction?.Dispose();
+        }
+    }
 
+    private static void CopyStringParameter(Element element, string sourceName, string targetName)
+    {
+        var source = element.LookupParameter(sourceName);
+        var target = element.LookupParameter(targetName);
+        if (source is null || target is null || target.IsReadOnly)
+            return;
 
-
-
-
+        target.Set(source.AsString() ?? string.Empty);
     }
 
 

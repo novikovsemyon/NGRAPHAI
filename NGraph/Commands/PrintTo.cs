@@ -62,21 +62,28 @@ public class PrintTo : ExternalCommand
 
 
 
-         if (File.Exists(Directory.GetFiles(Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments)).FirstOrDefault(i => i.Contains("NSolution.pdf"))))
-         {
-             File.Delete(Directory.GetFiles(Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments)).FirstOrDefault(i => i.Contains("NSolution.pdf")));
-         }
+         var stalePdf = Directory.GetFiles(Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments))
+             .FirstOrDefault(i => i.Contains("NSolution.pdf"));
+         if (!string.IsNullOrWhiteSpace(stalePdf) && File.Exists(stalePdf))
+             File.Delete(stalePdf);
 
          foreach (ElementId e in selectedEl)
          {
 
              Helpers helpers = new Helpers();
 
-             Element element = Document.GetElement(e);
+             if (Document.GetElement(e) is not ViewSheet sheet)
+                 continue;
 
-             var fi_es = new FilteredElementCollector(Document, e)
+             var titleBlocks = new FilteredElementCollector(Document, e)
                  .OfClass(typeof(FamilyInstance))
-                 .OfCategory(BuiltInCategory.OST_TitleBlocks);
+                 .OfCategory(BuiltInCategory.OST_TitleBlocks)
+                 .OfType<FamilyInstance>()
+                 .Where(fi => fi.get_BoundingBox(sheet) is not null)
+                 .ToList();
+
+             if (titleBlocks.Count == 0)
+                 continue;
 
 
 
@@ -84,14 +91,14 @@ public class PrintTo : ExternalCommand
 
              //Найдем самую наименьшую координату в списке элементов 
              //OrderBy(k => k.Value).First(). === MinBy
-             var minInfi_es_X = fi_es.OrderBy(fi => fi.get_BoundingBox(Document.GetElement(fi.OwnerViewId) as ViewSheet).Min.X).First() as FamilyInstance;
-             var minInfi_es_Y = fi_es.OrderBy(fi => fi.get_BoundingBox(Document.GetElement(fi.OwnerViewId) as ViewSheet).Min.Y).First() as FamilyInstance;
+             var minInfi_es_X = titleBlocks.OrderBy(fi => fi.get_BoundingBox(sheet)!.Min.X).First();
+             var minInfi_es_Y = titleBlocks.OrderBy(fi => fi.get_BoundingBox(sheet)!.Min.Y).First();
 
 
              //Начало в координатах листа
              XYZ begin = new XYZ(
-                 minInfi_es_X.get_BoundingBox(Document.GetElement(minInfi_es_X.OwnerViewId) as ViewSheet).Min.X,
-                 minInfi_es_Y.get_BoundingBox(Document.GetElement(minInfi_es_X.OwnerViewId) as ViewSheet).Min.Y,
+                 minInfi_es_X.get_BoundingBox(sheet)!.Min.X,
+                 minInfi_es_Y.get_BoundingBox(sheet)!.Min.Y,
                  0);
 
              //Относительно этих координат будем определять начало бумаги (полей принтера)
@@ -105,12 +112,11 @@ public class PrintTo : ExternalCommand
              string concatname = "";
 
 
-             foreach (var item in fi_es)
+             foreach (var sheet_fi in titleBlocks)
              {
-                 FamilyInstance sheet_fi = item as FamilyInstance;
-
-                 XYZ min = sheet_fi.get_BoundingBox(Document.GetElement(sheet_fi.OwnerViewId) as ViewSheet).Min;
-                 XYZ max = sheet_fi.get_BoundingBox(Document.GetElement(sheet_fi.OwnerViewId) as ViewSheet).Max;
+                 var boundingBox = sheet_fi.get_BoundingBox(sheet)!;
+                 XYZ min = boundingBox.Min;
+                 XYZ max = boundingBox.Max;
 
                  XYZ deltaFromBegin = min - begin;
                  double deltaToRight = deltaFromBegin.X * Math.Sign(deltaFromBegin.X) * -1 * K;
@@ -118,10 +124,6 @@ public class PrintTo : ExternalCommand
 
                  if (sheet_fi != null)
                  {
-
-
-                     ElementId sheet_type_id = sheet_fi.GetTypeId();
-                     ElementType sheet_type = Document.GetElement(sheet_type_id) as ElementType;
 
 
                      double widthValue = Math.Round(helpers.FeetToMillimeters((max.X - min.X) * Math.Sign(max.X - min.X)));
@@ -142,13 +144,17 @@ public class PrintTo : ExternalCommand
                      //try { printmgr.SelectNewPrintDriver("Microsoft Print to PDF"); }
                      try { printmgr.SelectNewPrintDriver("PDF-XChange Standard"); }
                      //try { printmgr.SelectNewPrintDriver("PDF24"); }
-                     catch { TaskDialog.Show("Ошибка", "Установите принтер PDF-XCHANGE https://disk.yandex.ru/d/jaz9RA_RKtAIhw"); }
+                     catch
+                     {
+                         TaskDialog.Show("Ошибка", "Не найден принтер PDF-XChange Standard.");
+                         return;
+                     }
 
                      //catch { TaskDialog.Show("Ошибка", "Установите принтер Microsoft Print to PDF https://www.biopdf.com/download.php"); }
 
                      FilteredElementCollector col = new FilteredElementCollector(Document).OfClass(typeof(PrintSetting));
 
-                     PrintSetting set = null;
+                     PrintSetting? set = null;
 
                      foreach (PrintSetting ps in col)
                      {
@@ -164,6 +170,11 @@ public class PrintTo : ExternalCommand
 
 
                      //closing print settings
+                     if (set is null)
+                     {
+                         TaskDialog.Show("Ошибка", "Не удалось создать временную настройку печати.");
+                         return;
+                     }
 
                      printmgr.PrintSetup.CurrentPrintSetting = set;
 
@@ -178,8 +189,6 @@ public class PrintTo : ExternalCommand
 
                      printmgr.PrintSetup.CurrentPrintSetting.PrintParameters.PaperPlacement = PaperPlacementType.Margins;
                      printmgr.PrintSetup.CurrentPrintSetting.PrintParameters.MarginType = MarginType.UserDefined;
-                     double deltaX = helpers.MillimetersToFeet(420);
-                     double deltaY = helpers.MillimetersToFeet(297);
 
                      //Если надо сместить вправо А3 от 0,0,0 то надо задать UserDefinedMarginX = -;
 
@@ -197,16 +206,10 @@ public class PrintTo : ExternalCommand
 
                      //page orientetion
 
-                     if (heightValue > widthValue)
-                     {
-                         printmgr.PrintSetup.CurrentPrintSetting.PrintParameters.PageOrientation = PageOrientationType.Landscape;
-
-                     }
-
-                     if (widthValue < heightValue)
-                     {
-                         printmgr.PrintSetup.CurrentPrintSetting.PrintParameters.PageOrientation = PageOrientationType.Portrait;
-                     }
+                     printmgr.PrintSetup.CurrentPrintSetting.PrintParameters.PageOrientation =
+                         widthValue >= heightValue
+                             ? PageOrientationType.Landscape
+                             : PageOrientationType.Portrait;
 
                      string paperSize = "";
 
@@ -238,7 +241,7 @@ public class PrintTo : ExternalCommand
                      }
 
                      //string nameFilePDF = element.GetParameter(BuiltInParameter.SHEET_NUMBER).AsString();
-                     string nameFilePDF = element.get_Parameter(BuiltInParameter.SHEET_NUMBER).AsString() + "-" + element.get_Parameter(BuiltInParameter.SHEET_NAME).AsString();
+                     string nameFilePDF = sheet.SheetNumber + "-" + sheet.Name;
 
                      var splitname = nameFilePDF.Split(Path.GetInvalidFileNameChars());
 
@@ -261,16 +264,14 @@ public class PrintTo : ExternalCommand
                      //manager.WritePrivateString("PDF Printer", "output", @$"{directiryPDF}\{element.Name +"_"+ i.ToString()}.pdf");
                      //System.Threading.Thread.Sleep(1000); //Важно успеть прочитать файл
                      printmgr.PrintSetup.Save();
-                     Autodesk.Revit.DB.ViewSheet vs = element as Autodesk.Revit.DB.ViewSheet;
-
                      printmgr.PrintRange = PrintRange.Select;
 
                      ViewSet viewSet = new ViewSet();
-                     viewSet.Insert(vs);
+                     viewSet.Insert(sheet);
                      printmgr.ViewSheetSetting.CurrentViewSheetSet.Views = viewSet;
                      //printmgr.ViewSheetSetting.SaveAs("tempViewSet");
 
-                     printmgr.SubmitPrint(vs);
+                     printmgr.SubmitPrint(sheet);
 
                      printmgr.PrintSetup.Delete();
 
@@ -295,7 +296,7 @@ public class PrintTo : ExternalCommand
              string mydocPath = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments);
              var files = Directory.GetFiles(mydocPath);
              ///Сцука принтер в имени файла точки заменяет на -
-             findedfile = files.FirstOrDefault(i => i.Contains("NSolution"));
+             findedfile = files.FirstOrDefault(i => i.Contains("NSolution")) ?? string.Empty;
 
              if (concatname.Count() > 100)
              {
@@ -305,9 +306,8 @@ public class PrintTo : ExternalCommand
              newfile = directiryPDF + concatname + ".pdf";
 
 
-             if (File.Exists(findedfile))
+             if (!string.IsNullOrWhiteSpace(findedfile) && File.Exists(findedfile))
              {
-
                  File.Copy(findedfile, newfile, true);
                  File.Delete(findedfile);
              }
@@ -540,49 +540,38 @@ public class PrintTo : ExternalCommand
          int iteratorDWG = 0;
          foreach (ElementId e in selectedEl)
          {
+             if (Document.GetElement(e) is not ViewSheet sheet)
+                 continue;
 
              DWGExportOptions dwgOption = new DWGExportOptions();
              ExportDWGSettings dWGSettings = ExportDWGSettings.Create(Document, "export");
-             dwgOption = dWGSettings.GetDWGExportOptions();
-             dwgOption.Colors = ExportColorMode.TrueColorPerView;
-             dwgOption.FileVersion = ACADVersion.R2018;
-             dwgOption.MergedViews = true;
-             dwgOption.UseHatchBackgroundColor = false;
-
-
-             Element element = Document.GetElement(e);
-             ElementType ftype = Document.GetElement(element.GetTypeId()) as ElementType;
-             List<ElementId> icollection = new List<ElementId>();
-             icollection.Add(e);
-
-             string nameFile = element.get_Parameter(BuiltInParameter.SHEET_NUMBER).AsString() + "-" + element.get_Parameter(BuiltInParameter.SHEET_NAME).AsString();
-
-             string nameFileDwg = string.Concat(nameFile.Split(Path.GetInvalidFileNameChars()));
-
-             
-
-
-             Document.Export(directiryDWG, nameFileDwg, icollection, dwgOption);
-
-
-
-             if (Directory.EnumerateFiles(directiryDWG).Contains(nameFileDwg))
+             try
              {
-                 Document.Export(directiryDWG, nameFileDwg + iteratorDWG.ToString(), icollection, dwgOption);
-                 iteratorDWG++;
-             }
-             else
-             {
-                 Document.Export(directiryDWG, nameFileDwg, icollection, dwgOption);
+                 dwgOption = dWGSettings.GetDWGExportOptions();
+                 dwgOption.Colors = ExportColorMode.TrueColorPerView;
+                 dwgOption.FileVersion = ACADVersion.R2018;
+                 dwgOption.MergedViews = true;
+                 dwgOption.UseHatchBackgroundColor = false;
+
+                 List<ElementId> sheetIds = new List<ElementId> { e };
+                 string nameFile = sheet.SheetNumber + "-" + sheet.Name;
+                 string baseName = string.Concat(nameFile.Split(Path.GetInvalidFileNameChars()));
+                 string exportName = baseName;
+
+                 while (File.Exists(Path.Combine(directiryDWG, exportName + ".dwg")))
+                 {
+                     iteratorDWG++;
+                     exportName = baseName + "_" + iteratorDWG;
+                 }
+
+                 Document.Export(directiryDWG, exportName, sheetIds, dwgOption);
                  iteratorDWG = 0;
              }
-
-
-             ElementId dwgsettinid = dWGSettings.Id;
-             Document.Delete(dwgsettinid);
-
+             finally
+             {
+                 Document.Delete(dWGSettings.Id);
+             }
          }
-
      }
  }
 

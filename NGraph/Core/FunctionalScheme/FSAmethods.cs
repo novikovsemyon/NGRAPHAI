@@ -18,15 +18,17 @@ namespace NGraph.Core.FunctionalScheme;
      public bool RemooveNotPinnedElementFromFootor(Document doc, string FSA_CABEL_)
      {
          
-         ViewDrafting activeView = doc.ActiveView as ViewDrafting;
-         var elements_where_is_not_Pinned = doc.GetElements(activeView.Id).ToElements()
+         if (doc.ActiveView is not ViewDrafting activeView)
+             return false;
+
+         var elements_where_is_not_Pinned = new FilteredElementCollector(doc, activeView.Id).ToElements()
                 .OfType<FamilyInstance>()
                 .Where(k => k.Name.Contains(FSA_CABEL_)
                 || k.Name.Contains(Const.Element_CabelForFootor))
                 .Where(k => k.Pinned == false)
                 .Select(i => i.Id).ToList();
          /*
-         var elementsTAG_where_is_not_Pinned = doc.GetElements(activeView.Id).ToElements()
+         var elementsTAG_where_is_not_Pinned = new FilteredElementCollector(doc, activeView.Id).ToElements()
            .OfType<IndependentTag>()
            .Where(k => k.Name == Const.Element_Tag_CabelForFootor)
            .Where(k => k.Pinned == false)
@@ -58,15 +60,17 @@ namespace NGraph.Core.FunctionalScheme;
      public bool RemooveFootor(Document doc, string Footer)
      {
 
-         ViewDrafting activeView = doc.ActiveView as ViewDrafting;
-         var elements = doc.GetElements(activeView.Id).ToElements()
+         if (doc.ActiveView is not ViewDrafting activeView)
+             return false;
+
+         var elements = new FilteredElementCollector(doc, activeView.Id).ToElements()
                 .OfType<FamilyInstance>()
                 .Where(k => k.Name.Contains(Footer)
                 )
                 .Where(k => k.Pinned == false)
                 .Select(i => i.Id).ToList();
          /*
-         var elementsTAG_where_is_not_Pinned = doc.GetElements(activeView.Id).ToElements()
+         var elementsTAG_where_is_not_Pinned = new FilteredElementCollector(doc, activeView.Id).ToElements()
            .OfType<IndependentTag>()
            .Where(k => k.Name == Const.Element_Tag_CabelForFootor)
            .Where(k => k.Pinned == false)
@@ -102,12 +106,12 @@ namespace NGraph.Core.FunctionalScheme;
      {
          List<FSAheader> fSAelementOfHeaderStructs = [];
          //ViewDrafting activeView = doc.ActiveView as ViewDrafting;
-         var elements_FamilyInstance = doc.GetElements(activeView.Id).ToElements()
+         var elements_FamilyInstance = new FilteredElementCollector(doc, activeView.Id).ToElements()
              .OfType<FamilyInstance>()
              .Where(k => k.get_Parameter(new Guid(Const.Param_NS_Equpment_guid)) != null)
              .Where(i => i.Name == Const.Element_Header_Users || i.Name == Const.Element_Header_Users_NoTag);
 
-         var groups = doc.GetElements(activeView.Id).ToElements()
+         var groups = new FilteredElementCollector(doc, activeView.Id).ToElements()
              .OfType<Group>().Where(i => i.Location != null).ToList();
 
          
@@ -120,8 +124,14 @@ namespace NGraph.Core.FunctionalScheme;
              foreach (Group g in groups)
              {
                  
-                 var point = (fi.Location as LocationPoint).Point;
+                 if (fi.Location is not LocationPoint fiLocation)
+                     continue;
+
+                 var point = fiLocation.Point;
                  var b = g.get_BoundingBox(activeView);
+                 if (b is null)
+                     continue;
+
                  if (point.X < b.Max.X && point.X > b.Min.X && point.Y < b.Max.Y && point.Y > b.Min.Y)
                  {
                      fSAelementOfHeaderStruct.GroupRevit = g;
@@ -146,7 +156,7 @@ namespace NGraph.Core.FunctionalScheme;
      {
          List<FSAheader> fSAelementOfHeaderStructs = [];
          //ViewDrafting activeView = doc.ActiveView as ViewDrafting;
-         var elements_FamilyInstance = doc.GetElements(activeView.Id).ToElements()
+         var elements_FamilyInstance = new FilteredElementCollector(doc, activeView.Id).ToElements()
              .OfType<FamilyInstance>()
              .Where(i => i.Category.Name == "Элементы узлов")
              .Where(k => k.get_Parameter(new Guid(Const.Param_NS_Equpment_guid)) != null)
@@ -158,7 +168,7 @@ namespace NGraph.Core.FunctionalScheme;
              );
              
 
-        // var groups = doc.GetElements(activeView.Id).ToElements()
+        // var groups = new FilteredElementCollector(doc, activeView.Id).ToElements()
           //   .OfType<Group>().Where(i => i.Location != null).ToList();
 
 
@@ -198,8 +208,10 @@ namespace NGraph.Core.FunctionalScheme;
      public List<FSAfooter> FootorFind(Document doc)
      {
          List<FSAfooter> fSAfootors = new List<FSAfooter>();
-         ViewDrafting activeView = doc.ActiveView as ViewDrafting;
-         var elements_FamilyInstance = doc.GetElements(activeView.Id).ToElements()
+         if (doc.ActiveView is not ViewDrafting activeView)
+             return fSAfootors;
+
+         var elements_FamilyInstance = new FilteredElementCollector(doc, activeView.Id).ToElements()
              .OfType<FamilyInstance>()
              .Where(i => i.Name == Const.Element_Footor).ToList();
          foreach(var fi in elements_FamilyInstance)
@@ -225,38 +237,47 @@ namespace NGraph.Core.FunctionalScheme;
 
          using (Transaction tr = new Transaction(doc, $"Создание элементов футора"))
          {
-             var extention = true;
              tr.Start();
              try
              {
-                 var GrouppedHeaderBuGrouprevit_withOutNull = footer.FSAheaders.Where(i => i.GroupRevit != null).GroupBy(i => i.GroupRevit.Id).ToList();
-                 var GrouppedHeaderBuGrouprevit_WithNullGroup = footer.FSAheaders.Where(i => i.GroupRevit == null).ToList();
-                 
-                 //footer.FSAheaders
-                 int index = 1;//Индекс создания
-                 foreach (var header in GrouppedHeaderBuGrouprevit_withOutNull)
+                 var groupedHeaders = footer.FSAheaders
+                     .Where(i => i.GroupRevit is not null)
+                     .GroupBy(i => i.GroupRevit!.Id)
+                     .ToList();
+                 var ungroupedHeaders = footer.FSAheaders.Where(i => i.GroupRevit is null).ToList();
+
+                 int index = 1; // Индекс создания
+                 foreach (var header in groupedHeaders)
                  {
-                     foreach(var h in header.Take(header.Count()))
+                     foreach (var h in header)
                      {
-                         FSAfooterGroupedElements fSAfooterGroupedElements = new FSAfooterGroupedElements(doc, viewDrafting, h, footer, ref index); //Создание группы
-                         footer.FSAfooterGroupedElements.Add(fSAfooterGroupedElements); //Добавляем их в футер
+                         FSAfooterGroupedElements groupedElements = new FSAfooterGroupedElements(doc, viewDrafting, h, footer, ref index);
+                         footer.FSAfooterGroupedElements.Add(groupedElements);
                      }
-                       
                  }
 
-                 foreach (var header in GrouppedHeaderBuGrouprevit_WithNullGroup)
+                 foreach (var header in ungroupedHeaders)
                  {
-                     FSAfooterGroupedElements fSAfooterGroupedElements = new FSAfooterGroupedElements(doc, viewDrafting, header, footer, ref index); //Создание группы
-                     footer.FSAfooterGroupedElements.Add(fSAfooterGroupedElements); //Добавляем их в футер
+                     FSAfooterGroupedElements groupedElements = new FSAfooterGroupedElements(doc, viewDrafting, header, footer, ref index);
+                     footer.FSAfooterGroupedElements.Add(groupedElements);
                  }
 
-                 //Устанавливаем длину футора
-                 (doc.GetElement(footer.ID) as FamilyInstance).LookupParameter(Const.Param_NS_LinghtOfFooter).Set(index);
+                 var footerInstance = doc.GetElement(footer.ID) as FamilyInstance
+                     ?? throw new InvalidOperationException("Не найден экземпляр футора в документе.");
+                 var lengthParameter = footerInstance.LookupParameter(Const.Param_NS_LinghtOfFooter)
+                     ?? throw new InvalidOperationException($"У футора отсутствует параметр '{Const.Param_NS_LinghtOfFooter}'.");
+                 if (lengthParameter.IsReadOnly)
+                     throw new InvalidOperationException($"Параметр '{Const.Param_NS_LinghtOfFooter}' доступен только для чтения.");
 
+                 lengthParameter.Set(index);
+                 tr.Commit();
              }
-             catch { }
-             tr.Commit();
-             
+             catch
+             {
+                 if (tr.GetStatus() == TransactionStatus.Started)
+                     tr.RollBack();
+                 throw;
+             }
          }
          
 
@@ -302,30 +323,26 @@ namespace NGraph.Core.FunctionalScheme;
      public List<FSAfooter> FootorCreateByStruct(Document doc, List<FSAheader> fSAelementOfHeaderStructs, List<XYZ> xyz)
      {
          List<FSAfooter> fSAfootors = new List<FSAfooter>();
+         var groupedStructures = fSAelementOfHeaderStructs.GroupBy(i => i.Group).ToList();
 
-         List<string> fsaStrings = [];
+         if (groupedStructures.Count != xyz.Count)
+             throw new ArgumentException(
+                 $"Количество точек размещения ({xyz.Count}) не совпадает с количеством групп ФСА ({groupedStructures.Count}).",
+                 nameof(xyz));
 
-         int count = 0;
-         foreach (var fsastruct in fSAelementOfHeaderStructs.GroupBy(i => i.Group))// Группируем элементы структурной схемы по параметру Param_NS_Equpment
+         for (int count = 0; count < groupedStructures.Count; count++)
          {
-             
-             string group = fsastruct.Key; //Имя группы
-             fsaStrings.Add(group);
-             FSAfooter footor = FootorCreate(doc, xyz[count]); //Количество футоров совпадает с количеством групп
-             footor.Group = group; //присваиваем группе футора то же имя что и на структурной схеме
+             var fsastruct = groupedStructures[count];
+             string group = fsastruct.Key;
+             FSAfooter footor = FootorCreate(doc, xyz[count]);
+             footor.Group = group;
 
              fSAfootors.Add(footor);
-             foreach (FSAheader el in fsastruct.Take(fsastruct.Count())) //проходим по группированому списку элементов на структурной схеме
-             {
-                 footor.FSAheaders.Add(el); //добавляем к футеру в список его модели структурной схемы.
-             }
-             count++;
+             foreach (FSAheader el in fsastruct)
+                 footor.FSAheaders.Add(el);
          }
-         if (fsaStrings.Count() != xyz.Count())
-         {
-             return null;
-         }
-         else return fSAfootors;
+
+         return fSAfootors;
 
      }
 
@@ -353,26 +370,39 @@ namespace NGraph.Core.FunctionalScheme;
      /// <param name="doc"></param>
      /// <param name="XYZ"></param>
      /// <returns></returns>
-     FSAfooter FootorCreate(Document doc, XYZ XYZ)
+     FSAfooter FootorCreate(Document doc, XYZ point)
      {
-         ViewDrafting activeView = doc.ActiveView as ViewDrafting;
-         FamilyInstance fi_footor = null;
-         using (Transaction tr = new Transaction(doc, $"Создание футора"))
+         if (doc.ActiveView is not ViewDrafting activeView)
+             throw new InvalidOperationException("Футор можно создать только на чертежном виде.");
+
+         var symbol = new FilteredElementCollector(doc)
+             .OfClass(typeof(FamilySymbol))
+             .Cast<FamilySymbol>()
+             .FirstOrDefault(q => q.Name == Const.Element_Footor)
+             ?? throw new InvalidOperationException($"Не найден тип семейства футора '{Const.Element_Footor}'.");
+
+         using (Transaction tr = new Transaction(doc, "Создание футора"))
          {
-             var extention = true;
              tr.Start();
              try
              {
-                 fi_footor = (doc.Create.NewFamilyInstance(XYZ, new FilteredElementCollector(doc)
-             .OfClass(typeof(FamilySymbol))
-             .First(q => q.Name == Const.Element_Footor) as FamilySymbol, activeView));
-                 //fi_footor.Pinned = true;
-             }
-             catch {}
-             tr.Commit();
-             return new FSAfooter(fi_footor);
-         }
+                 if (!symbol.IsActive)
+                 {
+                     symbol.Activate();
+                     doc.Regenerate();
+                 }
 
+                 var footerInstance = doc.Create.NewFamilyInstance(point, symbol, activeView);
+                 tr.Commit();
+                 return new FSAfooter(footerInstance);
+             }
+             catch
+             {
+                 if (tr.GetStatus() == TransactionStatus.Started)
+                     tr.RollBack();
+                 throw;
+             }
+         }
      }
 
 

@@ -99,7 +99,8 @@ namespace NGraph.Core
             List<ElementId> elIds = new List<ElementId>();
             List<EdgeId> edges = new List<EdgeId>();
             var count = MEPSystemForGraph.SectionsCount;
-            var mechanicalSys = MEPSystemForGraph as MechanicalSystem;
+            var mechanicalSys = MEPSystemForGraph as MechanicalSystem
+                ?? throw new ArgumentException("Для построения графа требуется MechanicalSystem.", nameof(MEPSystemForGraph));
             List<VertexId> vertexIds = new List<VertexId>();
             foreach (var e in mechanicalSys.DuctNetwork.OfType<FamilyInstance>())
             {
@@ -123,14 +124,8 @@ namespace NGraph.Core
                     foreach (var duct_ID in elementIds)
                     {
                         
-                        var element_finding = doc.GetElement(duct_ID);
-
-                        
-                        
-                        if (GetCategory.GetBuiltInCategory(element_finding.Category) == BuiltInCategory.OST_DuctCurves)
-                        {
-                            elementIds_onlyDuct.Add(element_finding as Duct);
-                        }
+                        if (doc.GetElement(duct_ID) is Duct ductElement)
+                            elementIds_onlyDuct.Add(ductElement);
 
 
                         /* since 2022
@@ -145,20 +140,24 @@ namespace NGraph.Core
 
                     foreach (Duct item in elementIds_onlyDuct)
                     {
-                        foreach (var connectors in (item as MEPCurve).ConnectorManager.Connectors)
+                        foreach (Connector connector in item.ConnectorManager.Connectors)
                         {
-                            var allref = (connectors as Connector).AllRefs;
+                            var allref = connector.AllRefs;
 
 
                             foreach (Connector con in allref)
                             {
+                                var owner = con.Owner;
+                                if (owner?.Category is null)
+                                    continue;
+
                                 
-                                if ((GetCategory.GetBuiltInCategory((con as Connector).Owner.Category) == BuiltInCategory.OST_MechanicalEquipment)
-                                    || (GetCategory.GetBuiltInCategory((con as Connector).Owner.Category) == BuiltInCategory.OST_ElectricalEquipment))
+                                if ((GetCategory.GetBuiltInCategory(owner.Category) == BuiltInCategory.OST_MechanicalEquipment)
+                                    || (GetCategory.GetBuiltInCategory(owner.Category) == BuiltInCategory.OST_ElectricalEquipment))
                                 {
-                                    if (elementIds.Contains(((con as Connector).Owner.Id))==false)
+                                    if (elementIds.Contains((owner.Id))==false)
                                     {
-                                        elementIds.Add((con as Connector).Owner.Id);
+                                        elementIds.Add(owner.Id);
                                     }
                                     
 
@@ -167,9 +166,9 @@ namespace NGraph.Core
 
 
                                 /*
-                                if ((con as Connector).Owner.Category.BuiltInCategory == BuiltInCategory.OST_MechanicalEquipment || (con as Connector).Owner.Category.BuiltInCategory == BuiltInCategory.OST_ElectricalEquipment)
+                                if (owner.Category.BuiltInCategory == BuiltInCategory.OST_MechanicalEquipment || owner.Category.BuiltInCategory == BuiltInCategory.OST_ElectricalEquipment)
                                 {
-                                    elementIds.Add((con as Connector).Owner.Id);
+                                    elementIds.Add(owner.Id);
                                 }
                                 */
                             }
@@ -183,18 +182,18 @@ namespace NGraph.Core
                     List<VertexId> vertexIdsForEdge = new List<VertexId>();
                     foreach (ElementId elId in elementIds)
                     {
-                        if (doc.GetElement(elId).GetType() == typeof(Duct))
+                        var element = doc.GetElement(elId);
+                        if (element is Duct ductElement)
                         {
-                            duct.Add(doc.GetElement(elId) as Duct);
+                            duct.Add(ductElement);
                         }
-                        else if ((doc.GetElement(elId).GetType() == typeof(FamilyInstance)) & Helpers.IsPartType((doc.GetElement(elId) as FamilyInstance), PartType.Elbow) == false)
+                        else if (element is FamilyInstance familyInstance
+                                 && !Helpers.IsPartType(familyInstance, PartType.Elbow))
                         {
                             foreach (var v in vertexIds)
                             {
                                 if (v.Name == elId)
-                                {
                                     vertexIdsForEdge.Add(v);
-                                }
                             }
                         }
                     }
@@ -233,7 +232,8 @@ namespace NGraph.Core
             List<ElementId> elIds = new List<ElementId>();
             List<EdgeId> edges = new List<EdgeId>();
             var count = MEPSystemForGraph.SectionsCount;
-            var mechanicalSys = MEPSystemForGraph as MechanicalSystem;
+            var mechanicalSys = MEPSystemForGraph as MechanicalSystem
+                ?? throw new ArgumentException("Для построения графа требуется MechanicalSystem.", nameof(MEPSystemForGraph));
             List<VertexId> vertexIds = new List<VertexId>();
             foreach (var e in mechanicalSys.DuctNetwork.OfType<FamilyInstance>())
             {
@@ -256,13 +256,8 @@ namespace NGraph.Core
                     var elementIds_onlyDuct = new List<Duct>();
                     foreach (var duct_ID in elementIds)
                     {
-                        var element_finding = document.GetElement(duct_ID);
-                        
-                        
-                        if (GetCategory.GetBuiltInCategory(element_finding.Category) == BuiltInCategory.OST_DuctCurves)
-                        {
-                            elementIds_onlyDuct.Add(element_finding as Duct);
-                        }
+                        if (document.GetElement(duct_ID) is Duct ductElement)
+                            elementIds_onlyDuct.Add(ductElement);
 
                         /*
                          * if (element_finding.Category.BuiltInCategory == BuiltInCategory.OST_DuctCurves)
@@ -275,24 +270,28 @@ namespace NGraph.Core
 
                     foreach (Duct item in elementIds_onlyDuct)
                     {
-                        foreach (var connectors in (item as MEPCurve).ConnectorManager.Connectors)
+                        foreach (Connector connector in item.ConnectorManager.Connectors)
                         {
-                            var allref = (connectors as Connector).AllRefs;
+                            var allref = connector.AllRefs;
 
 
                             foreach (Connector con in allref)
                             {
-                                if ((GetCategory.GetBuiltInCategory((con as Connector).Owner.Category) == BuiltInCategory.OST_MechanicalEquipment )
-                                    || GetCategory.GetBuiltInCategory((con as Connector).Owner.Category) == BuiltInCategory.OST_ElectricalEquipment)
+                                var owner = con.Owner;
+                                if (owner?.Category is null)
+                                    continue;
+
+                                if ((GetCategory.GetBuiltInCategory(owner.Category) == BuiltInCategory.OST_MechanicalEquipment )
+                                    || GetCategory.GetBuiltInCategory(owner.Category) == BuiltInCategory.OST_ElectricalEquipment)
                                 {
-                                    elementIds.Add((con as Connector).Owner.Id);
+                                    elementIds.Add(owner.Id);
                                 }
 
 
                                 /*                                
-                                                                if ((con as Connector).Owner.Category.BuiltInCategory == BuiltInCategory.OST_MechanicalEquipment || (con as Connector).Owner.Category.BuiltInCategory == BuiltInCategory.OST_ElectricalEquipment)
+                                                                if (owner.Category.BuiltInCategory == BuiltInCategory.OST_MechanicalEquipment || owner.Category.BuiltInCategory == BuiltInCategory.OST_ElectricalEquipment)
                                                                 {
-                                                                    elementIds.Add((con as Connector).Owner.Id);
+                                                                    elementIds.Add(owner.Id);
                                                                 }
                                 */
                             }
@@ -305,18 +304,18 @@ namespace NGraph.Core
                     List<VertexId> vertexIdsForEdge = new List<VertexId>();
                     foreach (ElementId elId in elementIds)
                     {
-                        if (document.GetElement(elId).GetType() == typeof(Duct))
+                        var element = document.GetElement(elId);
+                        if (element is Duct ductElement)
                         {
-                            duct.Add(document.GetElement(elId) as Duct);
+                            duct.Add(ductElement);
                         }
-                        else if ((document.GetElement(elId).GetType() == typeof(FamilyInstance)) & Helpers.IsPartType((document.GetElement(elId) as FamilyInstance), PartType.Elbow) == false)
+                        else if (element is FamilyInstance familyInstance
+                                 && !Helpers.IsPartType(familyInstance, PartType.Elbow))
                         {
                             foreach (var v in vertexIds)
                             {
                                 if (v.Name == elId)
-                                {
                                     vertexIdsForEdge.Add(v);
-                                }
                             }
                         }
                     }
@@ -405,11 +404,13 @@ namespace NGraph.Core
             double sumLenght = 0;
             foreach (var item in lducts)
             {
-                var el = item.Location as LocationCurve;
-                var lenght = Math.Round((double)el.Curve.Length, 1);
+                if (item.Location is not LocationCurve locationCurve)
+                    continue;
+
+                var lenght = Math.Round(locationCurve.Curve.Length, 1);
                 sumLenght += lenght;
             }
-            if (1 < sumLenght & sumLenght > 0) { return 1; }
+            if (sumLenght > 1) { return 1; }
             return sumLenght;
         }
 
@@ -434,7 +435,7 @@ namespace NGraph.Core
             distances[source] = 0;
             while (notVisited.Any())
             {
-                var nearestVertex = notVisited.OrderBy(v => distances[v]).FirstOrDefault();
+                var nearestVertex = notVisited.OrderBy(v => distances[v]).First();
                 notVisited.Remove(nearestVertex);
 
                 foreach (var edge in nearestVertex.Edges)
@@ -484,7 +485,7 @@ namespace NGraph.Core
             distances[source] = 0;
             while (notVisited.Any())
             {
-                var nearestVertex = notVisited.OrderBy(v => distances[v]).FirstOrDefault();
+                var nearestVertex = notVisited.OrderBy(v => distances[v]).First();
                 notVisited.Remove(nearestVertex);
 
                 foreach (var edge in nearestVertex.Edges)
@@ -524,8 +525,10 @@ namespace NGraph.Core
         public static List<Duct> DuctFromMS(MEPSystem sys)
         {
             List<Duct> list = new List<Duct>();
-            var es = sys as MechanicalSystem;
-            list.AddRange(es.DuctNetwork.OfType<Duct>());
+            if (sys is not MechanicalSystem mechanicalSystem)
+                return list;
+
+            list.AddRange(mechanicalSystem.DuctNetwork.OfType<Duct>());
             return list;
         }
 

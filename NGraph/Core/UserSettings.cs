@@ -45,7 +45,7 @@ public sealed class UserSettings
     private static string Read(XElement root, string name, string fallback)
     {
         var value = (string?)root.Element(name);
-        return string.IsNullOrWhiteSpace(value) ? fallback : value.Trim();
+        return string.IsNullOrWhiteSpace(value) ? fallback : value!.Trim();
     }
 
     /// <summary>Сначала записываем временный файл: неудачная запись не повреждает предыдущие настройки.</summary>
