@@ -19,7 +19,8 @@ public class FSAentity
 
     public FSAentity(FamilyInstance fi)
     {
-        ArgumentNullException.ThrowIfNull(fi);
+        if (fi is null)
+            throw new ArgumentNullException(nameof(fi));
         if (fi.Location is not LocationPoint location)
             throw new InvalidOperationException($"Элемент {fi.Id} не имеет точечного расположения.");
 
