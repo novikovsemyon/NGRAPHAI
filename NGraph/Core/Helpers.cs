@@ -179,8 +179,18 @@ namespace NGraph.Core
             ICollection<Element> collection = fsCollector.ToElements();
             foreach (var element in collection)
             {
-                FamilyInstance familyInstance = element as FamilyInstance;
-                XYZ DetailComponentsLocation = familyInstance.get_BoundingBox(view).Min;
+                if (element is not FamilyInstance familyInstance)
+                {
+                    continue;
+                }
+
+                var boundingBox = familyInstance.get_BoundingBox(view);
+                if (boundingBox is null)
+                {
+                    continue;
+                }
+
+                XYZ DetailComponentsLocation = boundingBox.Min;
                 Reference elRef = new Reference(familyInstance);
                 IndependentTag newTag = IndependentTag.Create(document, view.Id, elRef, true, tagMode, tagorn, DetailComponentsLocation);
                 if (null == newTag)
@@ -220,9 +230,9 @@ namespace NGraph.Core
         {
  
             ISelectionFilter selFilter = new MechanicalEquipmentSelectionFilter(builtInCategory);
-            Reference myRef = uiDoc.Application.ActiveUIDocument.Selection.PickObject(ObjectType.Element, selFilter, $"{builtInCategory.ToString()}");
-            Element elementOfRef = doc.GetElement(myRef);
-            return elementOfRef;
+            Reference myRef = uiDoc.Selection.PickObject(ObjectType.Element, selFilter, builtInCategory.ToString());
+            return doc.GetElement(myRef)
+                   ?? throw new InvalidOperationException("Выбранный элемент больше не существует в документе.");
         }
 
         static public List<Element> SelectElementsId(BuiltInCategory builtInCategory, UIDocument uiDoc)
@@ -238,13 +248,24 @@ namespace NGraph.Core
         public void DisConnectDuctCurveWith(MEPSystem mepsystem, Document _doc, BuiltInCategory builtInCategory)
         {
 
-            var faminst = (mepsystem as MechanicalSystem).DuctNetwork.OfType<FamilyInstance>();
+            if (mepsystem is not MechanicalSystem mechanicalSystem)
+            {
+                return;
+            }
+
+            var faminst = mechanicalSystem.DuctNetwork.OfType<FamilyInstance>();
             foreach (var item in faminst)
             {
 
                 if (GetCategory.GetBuiltInCategory(item.Category) == builtInCategory)
                 {
-                    foreach (Connector con in item.MEPModel.ConnectorManager.Connectors)
+                    var connectorManager = item.MEPModel?.ConnectorManager;
+                    if (connectorManager is null)
+                    {
+                        continue;
+                    }
+
+                    foreach (Connector con in connectorManager.Connectors)
                     {
                         if (con.Domain == Domain.DomainHvac)
                         {
@@ -270,8 +291,13 @@ namespace NGraph.Core
         /// <returns></returns>
         public void ConnectDuctCurveWith(MEPSystem mepsystem, Document _doc, BuiltInCategory builtInCategory)
         {
-            var ducts = (mepsystem as MechanicalSystem).DuctNetwork.OfType<Duct>();
-            //var faminst = (mepsystem as MechanicalSystem).DuctNetwork.OfType<FamilyInstance>();
+            if (mepsystem is not MechanicalSystem mechanicalSystem)
+            {
+                return;
+            }
+
+            var ducts = mechanicalSystem.DuctNetwork.OfType<Duct>();
+            //var faminst = mechanicalSystem.DuctNetwork.OfType<FamilyInstance>();
 
             var collector = new FilteredElementCollector(_doc);
             var listofelements = collector.OfCategory(builtInCategory).WhereElementIsNotElementType().ToElements();
@@ -287,7 +313,18 @@ namespace NGraph.Core
                         {
                             if (GetCategory.GetBuiltInCategory((fi as Element).Category) == builtInCategory)
                             {
-                                foreach (Connector connectorElecticalEq in (fi as FamilyInstance).MEPModel.ConnectorManager.Connectors)
+                                if (fi is not FamilyInstance familyInstance)
+                                {
+                                    continue;
+                                }
+
+                                var connectorManager = familyInstance.MEPModel?.ConnectorManager;
+                                if (connectorManager is null)
+                                {
+                                    continue;
+                                }
+
+                                foreach (Connector connectorElecticalEq in connectorManager.Connectors)
                                 {
                                     if (connectorElecticalEq.Domain == Domain.DomainHvac)
                                     {
@@ -335,17 +372,23 @@ namespace NGraph.Core
         static public List<MEPSystem> GetMEPSystems(Document doc, ElementId elementId, Domain domain)
         {
             List<MEPSystem> lMepSystem = new List<MEPSystem>();
-            foreach (var item in (doc.GetElement(elementId) as FamilyInstance).MEPModel.ConnectorManager.Connectors)
+            if (doc.GetElement(elementId) is not FamilyInstance familyInstance)
             {
-                try
-                {
-                    if (((item as Connector).MEPSystem != null) & (item as Connector).Domain == domain)
-                    {
-                        lMepSystem.Add((item as Connector).MEPSystem);
-                    }
-                }
-                catch { continue; };
+                return lMepSystem;
+            }
 
+            var connectorManager = familyInstance.MEPModel?.ConnectorManager;
+            if (connectorManager is null)
+            {
+                return lMepSystem;
+            }
+
+            foreach (Connector connector in connectorManager.Connectors)
+            {
+                if (connector.Domain == domain && connector.MEPSystem is MEPSystem mepSystem)
+                {
+                    lMepSystem.Add(mepSystem);
+                }
             }
 
             return lMepSystem;
@@ -382,17 +425,9 @@ namespace NGraph.Core
 
         static public VertexId GetVertexId(GraphId Graf, ElementId element)
         {
-            // VertexId vertexId = new VertexId(element);   
-            List<VertexId> list = new List<VertexId>();
-            for (int i = 0; i < Graf.Vertices.Count; i++)
-            {
-                if (Graf.Vertices[i].Name.Equals(element))
-                {
-                    list.Add(Graf.Vertices[i]);
-                }
-            }
-            return list[0];
-
+            var vertex = Graf.Vertices.FirstOrDefault(item => item.Name.Equals(element));
+            return vertex
+                   ?? throw new InvalidOperationException($"Вершина для элемента {element} отсутствует в графе.");
         }
 
 
