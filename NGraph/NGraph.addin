@@ -1,0 +1,14 @@
+﻿<RevitAddIns>
+    <AddIn Type="Application">
+        <Name>NGraph</Name>
+        <Assembly>NGraph\NGraph.dll</Assembly>
+        <AddInId>2641B7E1-55F2-4996-A930-779ADF18C8CC</AddInId>
+        <FullClassName>NGraph.Application</FullClassName>
+        <VendorId>Development</VendorId>
+        <VendorDescription></VendorDescription>
+    </AddIn>
+    <ManifestSettings>
+        <UseRevitContext>False</UseRevitContext>
+        <ContextName>NGraph</ContextName>
+    </ManifestSettings>
+</RevitAddIns>

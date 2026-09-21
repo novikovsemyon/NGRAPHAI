@@ -1,0 +1,42 @@
+﻿<Window
+    x:Class="NGraph.Views.NGraphView"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:viewModel="clr-namespace:NGraph.ViewModels"
+    mc:Ignorable="d"
+    d:DataContext="{d:DesignInstance viewModel:NGraphViewModel}"
+    ResizeMode="NoResize"
+    WindowStartupLocation="CenterScreen"
+    Title="NGraph"
+    Height="150"
+    Width="550">
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="0.1*"/>
+            <RowDefinition Height="1*"/>
+            <RowDefinition Height="1*"/>
+            <RowDefinition Height="1*"/>
+            <RowDefinition Height="0.1*"/>
+            
+            <RowDefinition Height="0.2*"/>
+        </Grid.RowDefinitions>
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="0.1*"/>
+            <ColumnDefinition Width="1*"/>
+            <ColumnDefinition Width="0.1*"/>
+        </Grid.ColumnDefinitions>
+        <TextBlock Grid.Column="1" Grid.Row="1"
+            Text="NGraph -плагин по автоматике"
+            FontSize="20"/>
+        <TextBlock Grid.Column="1" Grid.Row="2">
+            <Hyperlink RequestNavigate="Hyperlink_OnRequestNavigate1" 
+                       NavigateUri="https://shsystems.ru">Инструкции, файлы, ссылки по работе плагина на сайте Shsystems.ru </Hyperlink> 
+        </TextBlock>
+        <TextBlock Grid.Column="1" Grid.Row="3">
+            <Hyperlink RequestNavigate="Hyperlink_OnRequestNavigate2" 
+                       NavigateUri="https://beta-bim.com/">Комплексные решения для цифровизации проектирования Beta-Bim.com </Hyperlink> 
+        </TextBlock>
+    </Grid>
+</Window>

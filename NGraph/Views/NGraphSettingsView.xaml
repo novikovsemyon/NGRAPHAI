@@ -1,0 +1,42 @@
+﻿<Window
+    x:Class="NGraph.Views.NGraphSettingsView"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:viewModel="clr-namespace:NGraph.ViewModels"
+    mc:Ignorable="d"
+    d:DataContext="{d:DesignInstance viewModel:NGraphSettingsViewModel}"
+    ResizeMode="NoResize"
+    WindowStartupLocation="CenterScreen"
+    Title="NGraph"
+    Height="450"
+    Width="800">
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="0.5*"/>
+            <RowDefinition Height="2*"/>
+            <RowDefinition Height="3*"/>
+        </Grid.RowDefinitions>
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="1*"/>
+            <ColumnDefinition Width="1*"/>
+            <ColumnDefinition Width="1*"/>
+        </Grid.ColumnDefinitions>
+
+
+        <TextBlock
+            FontSize="20"
+            VerticalAlignment="Center"
+            HorizontalAlignment="Center" Height="27" Width="250" ><Run Text="Выб"/><Run Language="ru-ru" Text="е"/><Run Text="рите"/><Run Text=" тип"/><Run Text=" семейств"/><Run Text="а"/></TextBlock>
+        <ListBox x:Name="FamilyType" Grid.Column="1" d:ItemsSource="{d:SampleData ItemCount=5}" Margin="10,3,190,105" Grid.ColumnSpan="2" Grid.Row="1" SelectionChanged="FamilyType_SelectionChanged"/>
+        <ComboBox x:Name="Family" HorizontalAlignment="Center" Margin="0,10,0,0" Grid.Row="1" VerticalAlignment="Top" Width="252" Height="21" SelectionChanged="Family_SelectionChanged"/>
+        <TextBlock x:Name="TextBlock_Name" HorizontalAlignment="Center" Margin="0,102,0,0" Grid.Row="1" TextWrapping="Wrap" Text="TextBlock" VerticalAlignment="Top" Width="206" Height="53"/>
+        <Button x:Name="SelectFile_ini" Grid.Column="1" Content="Файл настроек" HorizontalAlignment="Left" Margin="87,72,0,0" Grid.Row="2" VerticalAlignment="Top" Click="SelectFile_ini_Click"/>
+
+
+
+
+
+    </Grid>
+</Window>

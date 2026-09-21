@@ -1,0 +1,67 @@
+﻿<Window
+    x:Class="NGraph.Views.NGraphNumberingSheetsView"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:viewModel="clr-namespace:NGraph.ViewModels"
+    mc:Ignorable="d"
+    d:DataContext="{d:DesignInstance viewModel:NGraphNumberingSheetsViewModel}"
+    ResizeMode="NoResize"
+    WindowStartupLocation="CenterScreen"
+    Title="Нумерация листов по диспетчеру задач"
+    Height="400"
+    Width="800">
+  <Grid ShowGridLines="False">
+    <Grid.RowDefinitions>
+        <RowDefinition/>
+        <RowDefinition/>
+        <RowDefinition/>
+        <RowDefinition/>
+        <RowDefinition/>
+        <RowDefinition/>
+        <RowDefinition/>
+        <RowDefinition Height="22.591"></RowDefinition>
+        <RowDefinition/>
+        <RowDefinition/>
+        <RowDefinition/>
+        <RowDefinition/>
+        <RowDefinition/>
+        <RowDefinition/>
+        <RowDefinition/>
+        <RowDefinition/>
+        <RowDefinition/>
+
+
+    </Grid.RowDefinitions>
+    <Grid.ColumnDefinitions>
+        <ColumnDefinition Width="67*"></ColumnDefinition>
+        <ColumnDefinition Width="13*"></ColumnDefinition>
+        <ColumnDefinition Width="54*"/>
+        <ColumnDefinition Width="67*"></ColumnDefinition>
+        <ColumnDefinition Width="67*"></ColumnDefinition>
+        <ColumnDefinition Width="67*"></ColumnDefinition>
+        <ColumnDefinition Width="67*"></ColumnDefinition>
+        <ColumnDefinition Width="67*"></ColumnDefinition>
+        <ColumnDefinition Width="67*"></ColumnDefinition>
+        <ColumnDefinition Width="67*"></ColumnDefinition>
+        <ColumnDefinition Width="67*"></ColumnDefinition>
+        <ColumnDefinition Width="67*"></ColumnDefinition>
+        <ColumnDefinition Width="67*"></ColumnDefinition>
+
+
+    </Grid.ColumnDefinitions>
+
+    <TextBlock  Grid.Column="1" Grid.Row="1" TextWrapping="Wrap" Grid.ColumnSpan="11"  Grid.RowSpan="3" Margin="0,0,0,12"><Run Language="ru-ru" Text="Для нумерации листов необходимо выбрать параметр, который будет инкрементироваться. Нумерация записывается в порядке по диспетчеру проекта "/></TextBlock>
+
+    <TextBlock Grid.Column="1" Grid.Row="3" Text="Выбирете имя параметра" Grid.ColumnSpan="5" Margin="0,22,0,23" Grid.RowSpan="3" />
+    <ComboBox x:Name="CB_Param" Grid.Column="5" Grid.Row="3"  Grid.ColumnSpan="7" SelectionChanged="CB_Param_SelectionChanged" Margin="66,22,0,23" Grid.RowSpan="3" />
+
+    <TextBlock Grid.Column="1" Grid.Row="5" Text="Значение из списка" Grid.ColumnSpan="5" Margin="0,0,0,22" Grid.RowSpan="2" />
+    <ComboBox  x:Name="CB_Value" Grid.Column="5" Grid.Row="5"  Grid.ColumnSpan="7" SelectionChanged="CB_Value_SelectionChanged" Margin="66,0,0,22" Grid.RowSpan="2"/>
+
+    <Button x:Name="Confirm"  Grid.Column="5" Grid.Row="15" Content="Ok"  Click="Confirm_Click" Grid.ColumnSpan="4" Margin="66,0,66,0"/>
+    <TextBox x:Name="TB_Value" Grid.Column="5" Grid.Row="6" Text="Введите номер" Grid.ColumnSpan="7" Grid.RowSpan="1" TextChanged="TextBox_TextChanged" PreviewTextInput ="TB_Value_PreviewTextInput" Margin="66,0,0,0" />
+
+</Grid>
+</Window>
