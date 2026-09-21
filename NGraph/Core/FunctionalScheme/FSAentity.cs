@@ -14,16 +14,26 @@ public class FSAentity
     /// <summary>
     /// _Установка
     /// </summary>
-    public string Group { get; set; }
+    public string Group { get; set; } = string.Empty;
 
 
     public FSAentity(FamilyInstance fi)
     {
+        if (fi is null)
+        {
+            throw new ArgumentNullException(nameof(fi));
+        }
+
+        if (fi.Location is not LocationPoint locationPoint)
+        {
+            throw new InvalidOperationException($"Элемент {fi.Id} не имеет точечного расположения.");
+        }
+
         FI = fi;
         ID = fi.Id;
-        XYZ = (fi.Location as LocationPoint).Point;
+        XYZ = locationPoint.Point;
         Pinned = fi.Pinned;
-        Name = fi.Name;
+        Name = fi.Name ?? string.Empty;
     }
 
 }
