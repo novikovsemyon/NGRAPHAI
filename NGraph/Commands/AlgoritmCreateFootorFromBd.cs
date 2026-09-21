@@ -1,4 +1,4 @@
-﻿using System.Windows.Annotations;
+using System.Windows.Annotations;
 using Autodesk.Revit.Attributes;
 using Autodesk.Revit.DB.Mechanical;
 using Autodesk.Revit.UI;
@@ -24,7 +24,8 @@ public class AlgoritmCreateFootorFromBd : ExternalCommand
         public override void Execute()
         {
 
-            string nameOfBdViewDrafting = "!_000_NGraph_БАЗА ДАННЫХ_ФСА";
+            // Читаем настройки при запуске: сохранённое имя действует без перезапуска Revit.
+        string nameOfBdViewDrafting = NGraph.Core.UserSettings.Load().FsaView;
             
             Helpers helper = new Helpers();
             var view = helper.AllElementsOfCategory(Document, BuiltInCategory.OST_Views).Where(x => x.Name == nameOfBdViewDrafting)
