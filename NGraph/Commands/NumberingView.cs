@@ -1,126 +1,132 @@
-﻿using Autodesk.Revit.Attributes;
-using Autodesk.Revit.DB.Mechanical;
+using Autodesk.Revit.Attributes;
 using System.Text.RegularExpressions;
+using Autodesk.Revit.UI;
 using NGraph.Core;
 using NGraph.ViewModels;
 using NGraph.Views;
 using Nice3point.Revit.Toolkit.External;
 
-
-
 namespace NGraph.Commands;
 
 /// <summary>
-///     Settings for plugin NGraph
+/// Нумерация выбранных листов.
 /// </summary>
 [UsedImplicitly]
 [Transaction(TransactionMode.Manual)]
 public class NumberingView : ExternalCommand
 {
-    
     public override void Execute()
     {
+        var viewModel = new NGraphNumberingSheetsViewModel
+        {
+            Doc = Document
+        };
 
-    
-        var viewModel = new NGraphNumberingSheetsViewModel();
-        viewModel.Doc = Document;
         var viewWindow = new NGraphNumberingSheetsView(viewModel);
         viewWindow.ShowDialog();
 
-
-        string nameparam = (viewWindow.CB_Param.SelectedItem as Parameter).Definition.Name;
-
-
-        // 1. Выбираем виды
-        int page = 1;
-        int.TryParse(viewWindow.TB_Value.Text, out page); //Сквозная нумерация (квадратик вверху)
-        int pageNumberSheet = 1; //Нумерация по графической части
-
-
-        ICollection<ElementId> selectedElementId = UiDocument.Selection.GetElementIds();
-
-
-        var sortedSelectedElementId = selectedElementId
-            .OrderBy(i => NgContext._FindParameter(Document.GetElement(i),BuiltInParameter.SHEET_NUMBER).AsString() , new NaturalStringComparer());
-
-    
-
-        using (Transaction t = new Transaction(Document, "NumberingView"))
+        if (viewWindow.Cancel is true)
         {
-            t.Start();
-            try
-            {
-
-
-                foreach (ElementId e in sortedSelectedElementId)
-                {
-
-                    Helpers helpers = new Helpers();
-
-                    Element element = Document.GetElement(e);
-
-                    //element.FindParameter("CISP_Номер страницы для выпуска").Set(page.ToString());
-                    NgContext._FindParameter(element,nameparam).Set(page.ToString());
-                    NgContext._FindParameter(element,"Номер листа для выпуска").Set(pageNumberSheet.ToString());
-
-                    page++;
-                    pageNumberSheet++;
-
-
-                }
-
-
-
-
-
-                t.Commit();
-            }
-            catch
-            {
-                t.RollBack();
-            }
+            return;
         }
 
-
-    
-    }
-    
-    
-    public class NaturalStringComparer : IComparer<string>
-    {
-        public int Compare(string x, string y)
+        if (viewWindow.CB_Param.SelectedItem is not Parameter selectedParameter)
         {
-            string[] partsX = Regex.Split(x.Replace(" ", ""), "([0-9]+)");
-            string[] partsY = Regex.Split(y.Replace(" ", ""), "([0-9]+)");
+            TaskDialog.Show("NGraph", "Не выбран параметр для нумерации.");
+            return;
+        }
 
+        var selectedElementIds = UiDocument.Selection.GetElementIds();
+        if (selectedElementIds.Count == 0)
+        {
+            TaskDialog.Show("NGraph", "Не выбраны листы для нумерации.");
+            return;
+        }
 
-            for (int i = 0; i < Math.Min(partsX.Length, partsY.Length); i++)
+        var page = int.TryParse(viewWindow.TB_Value.Text, out var parsedPage) && parsedPage > 0
+            ? parsedPage
+            : 1;
+        var pageNumberSheet = 1;
+
+        var sortedSelectedElementIds = selectedElementIds
+            .OrderBy(
+                id => NgContext._FindParameter(Document.GetElement(id), BuiltInParameter.SHEET_NUMBER)?.AsString() ?? string.Empty,
+                new NaturalStringComparer())
+            .ToList();
+
+        using var transaction = new Transaction(Document, "NGraph: нумерация листов");
+        transaction.Start();
+
+        try
+        {
+            foreach (var elementId in sortedSelectedElementIds)
             {
-                //Console.WriteLine(partsX[i] + " " + partsY[i]);
-                if (i % 2 == 1) // Это числовая часть
+                var element = Document.GetElement(elementId);
+                if (element is null)
                 {
-                    int numX = int.Parse(partsX[i]);
-                    int numY = int.Parse(partsY[i]);
-                    if (numX != numY) return numX.CompareTo(numY);
+                    continue;
                 }
-                else // Это текстовая часть
+
+                var pageParameter = NgContext._FindParameter(element, selectedParameter.Definition.Name);
+                var sheetNumberParameter = NgContext._FindParameter(element, "Номер листа для выпуска");
+
+                if (pageParameter is null || pageParameter.IsReadOnly)
                 {
-                    int stringCompare = partsX[i].CompareTo(partsY[i]);
-                    if (stringCompare != 0) return stringCompare;
+                    continue;
                 }
+
+                pageParameter.Set(page.ToString());
+
+                if (sheetNumberParameter is { IsReadOnly: false })
+                {
+                    sheetNumberParameter.Set(pageNumberSheet.ToString());
+                }
+
+                page++;
+                pageNumberSheet++;
             }
-            return partsX.Length.CompareTo(partsY.Length); // Если один префикс короче другого
+
+            transaction.Commit();
+        }
+        catch (Exception exception)
+        {
+            transaction.RollBack();
+            TaskDialog.Show("NGraph", $"Ошибка нумерации листов:\n{exception.Message}");
         }
     }
-    // сравнение по длине строки
-    class CustomStringComparer : IComparer<String>
+
+    public sealed class NaturalStringComparer : IComparer<string?>
     {
         public int Compare(string? x, string? y)
         {
-            int xLength = x?.Length ?? 0; // если x равно null, то длина 0
-            int yLength = y?.Length ?? 0;
-            return xLength - yLength;
+            x ??= string.Empty;
+            y ??= string.Empty;
+
+            var partsX = Regex.Split(x.Replace(" ", string.Empty), "([0-9]+)");
+            var partsY = Regex.Split(y.Replace(" ", string.Empty), "([0-9]+)");
+
+            for (var i = 0; i < Math.Min(partsX.Length, partsY.Length); i++)
+            {
+                if (i % 2 == 1 &&
+                    int.TryParse(partsX[i], out var numX) &&
+                    int.TryParse(partsY[i], out var numY))
+                {
+                    if (numX != numY)
+                    {
+                        return numX.CompareTo(numY);
+                    }
+                }
+                else
+                {
+                    var stringCompare = string.Compare(partsX[i], partsY[i], StringComparison.CurrentCulture);
+                    if (stringCompare != 0)
+                    {
+                        return stringCompare;
+                    }
+                }
+            }
+
+            return partsX.Length.CompareTo(partsY.Length);
         }
     }
-        
 }
