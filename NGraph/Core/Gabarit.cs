@@ -32,8 +32,8 @@ public class Gabarit
     /// <returns></returns>
     public static XYZ GetGabarit(FamilySymbol familySymbol, View viewDrafting)
     {
-        ArgumentNullException.ThrowIfNull(familySymbol);
-        ArgumentNullException.ThrowIfNull(viewDrafting);
+        if (familySymbol is null) throw new ArgumentNullException(nameof(familySymbol));
+        if (viewDrafting is null) throw new ArgumentNullException(nameof(viewDrafting));
 
         var boundingBox = familySymbol.get_BoundingBox(viewDrafting)
             ?? throw new InvalidOperationException($"Не удалось получить габариты семейства '{familySymbol.Name}'.");
