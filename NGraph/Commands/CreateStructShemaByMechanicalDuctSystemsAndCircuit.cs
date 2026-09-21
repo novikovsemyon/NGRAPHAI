@@ -16,23 +16,41 @@ public class CreateStructShemaByMechanicalDuctSystemsAndCircuit : ExternalComman
     
     public override void Execute()
     {
-       
-        var element = Helpers.SelectElementId(BuiltInCategory.OST_DuctCurves, UiDocument, Document);
+        var uiDocument = Application.ActiveUIDocument;
+        if (uiDocument is null)
+        {
+            return;
+        }
 
+        var document = uiDocument.Document;
+        Element selectedElement;
+        try
+        {
+            selectedElement = Helpers.SelectElementId(BuiltInCategory.OST_DuctCurves, uiDocument, document);
+        }
+        catch (Autodesk.Revit.Exceptions.OperationCanceledException)
+        {
+            return;
+        }
 
-        CreateBlockDiagram(Document, element.Id, element);
+        if (selectedElement is not Duct duct || duct.MEPSystem is null)
+        {
+            TaskDialog.Show("NGraph", "Выбранный воздуховод не принадлежит механической системе.");
+            return;
+        }
 
+        CreateBlockDiagram(document, uiDocument, duct);
     }
     
     
-        void CreateBlockDiagram(Document _doc, ElementId elementId, Element element)
+        void CreateBlockDiagram(Document _doc, UIDocument uiDocument, Duct duct)
         {
             Helpers helpers = new Helpers();
 
 
             #region //=========== 1 =========== grahp
             GraphId gr = new GraphId();
-            GraphId graph = gr.GraphIdFromSystem((element as Duct).MEPSystem , Document);
+            GraphId graph = gr.GraphIdFromSystem(duct.MEPSystem, _doc);
             #endregion
 
 
@@ -104,6 +122,12 @@ public class CreateStructShemaByMechanicalDuctSystemsAndCircuit : ExternalComman
                         //OrderByDescending(k => k.Value).First(). === MaxBy
 
                         */
+                        if (Dic.Count == 0)
+                        {
+                            TaskDialog.Show("NGraph", "Не удалось построить путь между элементами цепи. Проверьте связность системы воздуховодов.");
+                            break;
+                        }
+
                         VertexId minVertex = Dic.OrderBy(k => k.Value).First().Key;
 
                         //Удаляем найденую вершину и делаем ее стартовой
@@ -159,7 +183,7 @@ public class CreateStructShemaByMechanicalDuctSystemsAndCircuit : ExternalComman
 
 
 
-            ViewDrafting view = helpers.CreateViewDrafting(Document, "Структурная схема", true, UiDocument);
+            ViewDrafting view = helpers.CreateViewDrafting(_doc, "Структурная схема", true, uiDocument);
 
             //Расстановка структуры по уровням
             /*
@@ -416,21 +440,21 @@ public class CreateStructShemaByMechanicalDuctSystemsAndCircuit : ExternalComman
                 tr.Start();
                 try
                 {
-                    foreach (var item in GraphId.DuctFromMS((element as Duct).MEPSystem))
+                    foreach (var item in GraphId.DuctFromMS(duct.MEPSystem))
                     {
-                        item.LookupParameter("Комментарии").Set("");
-                        item.LookupParameter("NS_Сечение_мм.кв.").Set(0);
+                        item.LookupParameter("Комментарии")?.Set("");
+                        item.LookupParameter("NS_Сечение_мм.кв.")?.Set(0);
 
                     }
 
                     foreach (var item in dicDuctintSquare)
                     {
-                        item.Key.LookupParameter("NS_Сечение_мм.кв.").Set(item.Value.Sum());
+                        item.Key.LookupParameter("NS_Сечение_мм.кв.")?.Set(item.Value.Sum());
                     }
 
                     foreach (var item in dicDuctsstring)
                     {
-                        item.Key.LookupParameter("Комментарии").Set(System.String.Join(Environment.NewLine, item.Value));
+                        item.Key.LookupParameter("Комментарии")?.Set(System.String.Join(Environment.NewLine, item.Value));
                     }
 
 
