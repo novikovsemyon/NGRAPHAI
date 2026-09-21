@@ -126,10 +126,6 @@ public class PrintTo : ExternalCommand
                  {
 
 
-                     ElementId sheet_type_id = sheet_fi.GetTypeId();
-                     ElementType sheet_type = Document.GetElement(sheet_type_id) as ElementType;
-
-
                      double widthValue = Math.Round(helpers.FeetToMillimeters((max.X - min.X) * Math.Sign(max.X - min.X)));
                      double heightValue = Math.Round(helpers.FeetToMillimeters((max.Y - min.Y) * Math.Sign(max.Y - min.Y)));
 
@@ -158,7 +154,7 @@ public class PrintTo : ExternalCommand
 
                      FilteredElementCollector col = new FilteredElementCollector(Document).OfClass(typeof(PrintSetting));
 
-                     PrintSetting set = null;
+                     PrintSetting? set = null;
 
                      foreach (PrintSetting ps in col)
                      {
@@ -193,8 +189,6 @@ public class PrintTo : ExternalCommand
 
                      printmgr.PrintSetup.CurrentPrintSetting.PrintParameters.PaperPlacement = PaperPlacementType.Margins;
                      printmgr.PrintSetup.CurrentPrintSetting.PrintParameters.MarginType = MarginType.UserDefined;
-                     double deltaX = helpers.MillimetersToFeet(420);
-                     double deltaY = helpers.MillimetersToFeet(297);
 
                      //Если надо сместить вправо А3 от 0,0,0 то надо задать UserDefinedMarginX = -;
 
