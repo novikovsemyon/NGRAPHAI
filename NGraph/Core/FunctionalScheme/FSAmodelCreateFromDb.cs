@@ -1,360 +1,149 @@
-﻿using System.Net;
 using Autodesk.Revit.UI;
 
 namespace NGraph.Core.FunctionalScheme;
 
 public class FSAmodelCreateFromDb
 {
+    public Element? GetBDfromModel(Document doc, string nameInDb) =>
+        new Helpers().AllElementsOfCategory(doc, BuiltInCategory.OST_Views)
+            .FirstOrDefault(x => x.Name == nameInDb);
 
-
-    public FSAmodelCreateFromDb()
+    /// <summary>Читает карточки каталога без предположений о составе семейств внутри областей.</summary>
+    public static List<СекцияБазыДанных> CreateFromBd_ReadFilledRegion(Document document, View? view)
     {
-
-    }
-
-
-    public Element? GetBDfromModel(Document doc, string NameInBD)
-    {
-        Helpers helpers = new Helpers();
-        var view = helpers.AllElementsOfCategory(doc, BuiltInCategory.OST_Views).Where(x => x.Name == NameInBD)
-            .FirstOrDefault();
-        return view;
-
-    }
-    
-    /// <summary>
-    ///  Чтение с чертежного вида элементов из региона с заливкой название "BD_" (на выходе пустые элементы СекцияБазыДанных в списке)
-    /// </summary>
-    /// <param name="Document"></param>
-    /// <param name="view"></param>
-    /// <returns></returns>
-    public static List<СекцияБазыДанных> CreateFromBd_ReadFilledRegion(Document Document, View? view)
-    {
-        List < СекцияБазыДанных > sections = [];
-            
         if (view == null)
         {
-            TaskDialog.Show("Внимание", "Отсутствует чертежный вид базы элементов.");
-            return sections; 
+            TaskDialog.Show("NGraph", "Отсутствует чертёжный вид базы элементов.");
+            return new List<СекцияБазыДанных>();
         }
-        var elements = Document.GetElements(view.Id);
-            
-        var filledRegions = elements
-            .OfType<FilledRegion>()
-            .Where(region => Document.GetElement(region.GetTypeId())?.Name == UserSettings.Load().RegionType)
-            .ToList();
-            
-        foreach (var VARIABLE in filledRegions)
-        {
-            sections.Add(new СекцияБазыДанных(VARIABLE, view));
-        }
-            
-        return sections;
+        var regionType = UserSettings.Load().RegionType;
+        return new FilteredElementCollector(document).OwnedByView(view.Id)
+            .OfClass(typeof(FilledRegion)).Cast<FilledRegion>()
+            .Where(region => document.GetElement(region.GetTypeId())?.Name == regionType)
+            .Select(region => new СекцияБазыДанных(region, view)).ToList();
     }
 
     /// <summary>
-    /// Заполнение СекцияБазыДанных по ссылке
+    /// Сохраняет исходные элементы для штатного копирования Revit. Видимость семейства
+    /// не определяет его тип: FAS_Точка_связи и ГОСТ21.208 могут не иметь параметров сигнала или марки.
     /// </summary>
-    /// <param name="document"></param>
-    /// <param name="view"></param>
-    /// <param name="section"></param>
     public static void CreateFromBd_AddToSectionOtherElements(Document document, View? view,
         ref СекцияБазыДанных section)
     {
-        //Все элементы с чертежного вида
-
-        if (view is null)
+        if (view == null) throw new ArgumentException("Не выбран вид базы.");
+        var bounds = section.FilledRegion.get_BoundingBox(view)
+            ?? throw new InvalidOperationException("Не удалось определить границы выбранного варианта.");
+        // OwnedByView включает скрытые элементы, но исключает семейства с соседних видов.
+        var elements = new FilteredElementCollector(document).OwnedByView(view.Id)
+            .WhereElementIsNotElementType().ToElements();
+        // Марки внутри группы уже входят в её копию; отдельно добавляем только внешние марки.
+        var tags = elements.OfType<IndependentTag>().Where(tag => tag.GroupId == ElementId.InvalidElementId).ToList();
+        section.PlacementItems.Clear();
+        foreach (var element in elements)
         {
-            return;
-        }
-
-        var elements = document.GetElements(view.Id);
-
-
-
-        //Элементы из бызы отфильтрованные по нужным категориям
-        var filteredElements = elements
-            .Where(x => x.GetType() == typeof(FamilyInstance)
-                        || (x.GetType() == typeof(Group) &&
-                            x.Location != null) //Принадлежит группе и эта группа не входит в другую
-                        || x.GetType() == typeof(DetailLine)
-                        || x.GetType() == typeof(TextNote)
-
-            ).ToList();
-     
-        var hiddenElements = new FilteredElementCollector(document)
-            .OfClass(typeof(FamilyInstance)).WhereElementIsNotElementType()
-            .Where(x => x.IsHidden(view)).Select(x => x).ToList();
-/*
-        if (hiddenElements.Count != 0)
-        */
-        filteredElements.AddRange(hiddenElements);
-
-    
-            
-        var elementsTag = document.GetElements(view.Id)
-            
-            .Where(x => 
-                x.GetType() == typeof(IndependentTag)
-            );
-            
-        List<Element> lelements = []; //Список элементов для области
-
-                
-
-        var bb = section.FilledRegion.get_BoundingBox(view);
-                
-        foreach ( var e in filteredElements)
-        {
-            try
+            // Участники группы и вложенные семейства копируются вместе с родителем ровно один раз.
+            if (element.GroupId != ElementId.InvalidElementId) continue;
+            if (element is FamilyInstance nested && nested.SuperComponent != null) continue;
+            if (!(element is FamilyInstance || element is Group || element is DetailCurve || element is TextNote)) continue;
+            bool inside;
+            if (element.Location is LocationPoint point)
+                inside = ContainsPoint(bounds, point.Point);
+            else
             {
-                if ((e.Location as LocationPoint) != null && (Helpers.Contains(bb, (e.Location as LocationPoint).Point, false))) //У групп и экземпляров семейств не должно быть нулевых локаций
-                {
-                    if (e.GetType() == typeof(FamilyInstance))
-                    {
-                        if (e.IsHidden(view))
-                        {
-                            lelements.Add(e); //Оборудование
-                            var оборудование = new Оборудование(section, e as FamilyInstance);
-                            section.Оборудование.Add(оборудование);
-                           
-                            foreach (var t in elementsTag)
-                            {
-                                var tag = t as IndependentTag;
-
-#if REVIT2024_OR_GREATER
-                                    if (tag.GetTaggedElementIds().FirstOrDefault().HostElementId.Value==(e.Id.Value)) //Если метка принадлежит элементу (находим хост)
-                                    {
-                                        lelements.Add(e);
-                                        оборудование.Марка = new Марка(section, tag , e, document);
-
-                                    }
-#elif REVIT2023
-                                    if (tag.GetTaggedElementIds().FirstOrDefault().HostElementId == (e.Id)) //Если метка принадлежит элементу (находим хост)
-                                    {
-                                        lelements.Add(e);
-                                        оборудование.Марка = new Марка(section, tag, e, document);
-
-                                    }
-
-
-
-#else
-
-                                if (tag.TaggedElementId.HostElementId.IntegerValue == e.Id.IntegerValue) //Если метка принадлежит элементу (находим хост)
-                                {
-                                    lelements.Add(tag);
-
-                                    оборудование.Марка = new Марка(section, tag , e, document);
-
-                                }
-#endif
-                            }
-                            
-                        }
-                        else
-                        {
-                            lelements.Add(e); //Зеленая точка
-                            Точка точка = new(section, e as FamilyInstance);
-                            section.Точки.Add(точка);
-                            foreach (var t in elementsTag)
-                            {
-                                var tag = t as IndependentTag;
-
-#if REVIT2024_OR_GREATER
-                                    if (tag.GetTaggedElementIds().FirstOrDefault().HostElementId.Value==(e.Id.Value)) //Если метка принадлежит элементу (находим хост)
-                                    {
-                                        lelements.Add(e);
-                                        точка.Марка = new Марка(section, tag , e, document);
-
-                                    }
-#elif REVIT2023
-                                    if (tag.GetTaggedElementIds().FirstOrDefault().HostElementId == (e.Id)) //Если метка принадлежит элементу (находим хост)
-                                    {
-                                        lelements.Add(e);
-                                        точка.Марка = new Марка(section, tag, e, document);
-
-                                    }
-
-
-
-#else
-
-                                if (tag.TaggedElementId.HostElementId.IntegerValue == e.Id.IntegerValue) //Если метка принадлежит элементу (находим хост)
-                                {
-                                    lelements.Add(tag);
-
-                                    точка.Марка = new Марка(section, tag , e, document);
-
-                                }
-#endif
-                            }
-                                    
-                        }
-                                
-                    }
-                    else if (e.GetType() == typeof(Group))
-                    {
-                        lelements.Add(e);
-                        Группа группа = new(section, e as Group);
-                        section.Группы.Add(группа);
-
-                    }
-
-                }
-                else if (e.GetType() == typeof(DetailLine) && Helpers.Contains(bb,e.get_BoundingBox(view),false)) //bb.Contains(e.get_BoundingBox(view))
-                {
-#if REVIT2026_OR_GREATER
-                            if(e.GroupId.Value == -1)
-#else                         
-                    if(e.GroupId.IntegerValue == -1)
-#endif
-                    {
-                        lelements.Add(e);
-                        Линия линия = new(section, e as DetailLine);
-                        section.Линии.Add(линия);
-                    }
-
-                    /*
-                    try { var name = (e.GroupId.ToElement(Document) as Group).Name; }
-                    catch
-                    {
-                        lelements.Add(e);
-                        Линия линия = new(секцияБазыДанных, e as DetailLine);
-                        секцияБазыДанных.Линии.Add(линия);
-                    }
-                    */
-                }
-                else if (e.GetType() == typeof(TextNote) && Helpers.Contains(bb,e.get_BoundingBox(view),false)) //bb.Contains(e.get_BoundingBox(view))
-                {
-                            
-#if REVIT2026_OR_GREATER
-                            if(e.GroupId.Value == -1)
-#else                         
-                    if(e.GroupId.IntegerValue == -1)
-#endif
-                    {
-                        lelements.Add(e);
-                        Текст текст = new Текст(section, e as TextNote);
-                        section.Texts.Add(текст);
-                    }
-                            
-
-                }
-                        
-
+                var box = element.get_BoundingBox(view);
+                inside = box != null && ContainsPoint(bounds, box.Transform.OfPoint(box.Min))
+                    && ContainsPoint(bounds, box.Transform.OfPoint(box.Max));
             }
-            catch { }
-                    
-        }
+            if (!inside) continue;
 
-                
+            var hosts = new HashSet<ElementId>();
+            AddMembers(document, element, hosts);
+            var attachedTags = tags.Where(tag => TaggedIds(tag).Any(hosts.Contains)).ToList();
+            section.PlacementItems.Add(new CatalogPlacementItem(element, attachedTags, element.IsHidden(view)));
         }
+        if (section.PlacementItems.Count == 0)
+            throw new InvalidOperationException("В выбранной области нет элементов для вставки.");
+    }
 
+    // У чертёжных семейств габарит по Z может выходить за плоскую цветовую область.
+    // Принадлежность варианту определяется только координатами в плоскости чертежа.
+    private static bool ContainsPoint(BoundingBoxXYZ bounds, XYZ point)
+    {
+        var p = bounds.Transform.Inverse.OfPoint(point);
+        const double tolerance = 1e-7;
+        return p.X >= bounds.Min.X - tolerance && p.X <= bounds.Max.X + tolerance
+            && p.Y >= bounds.Min.Y - tolerance && p.Y <= bounds.Max.Y + tolerance;
+    }
+
+    private static void AddMembers(Document document, Element element, HashSet<ElementId> ids)
+    {
+        if (!ids.Add(element.Id)) return;
+        IEnumerable<ElementId> children = element is Group group ? group.GetMemberIds()
+            : element is FamilyInstance family ? family.GetSubComponentIds() : Array.Empty<ElementId>();
+        foreach (var id in children)
+            if (document.GetElement(id) is Element child) AddMembers(document, child, ids);
+    }
+
+    private static IEnumerable<ElementId> TaggedIds(IndependentTag tag)
+    {
+#if REVIT2022_OR_GREATER
+        return tag.GetTaggedLocalElementIds();
+#else
+        var id = tag.TaggedLocalElementId;
+        return id != ElementId.InvalidElementId ? new[] { id } : Array.Empty<ElementId>();
+#endif
+    }
 
     /// <summary>
-    /// 
+    /// Вызывается внутри транзакции команды. Копирование сохраняет все параметры,
+    /// ориентацию, типоразмеры и марки, включая семейства, неизвестные NGraph.
+    /// Пустое обозначение означает «сохранить значения из базы».
     /// </summary>
-    /// <param name="doc"></param>
-    /// <param name="newBD"></param>
-    /// <param name="new_view"></param>
-    /// <param name="ИмяУстановки"></param>
-    /// <param name="xyz"></param>
-    public static void CreateFromBd_withoutTransaction(Document doc, ref СекцияБазыДанных section, View new_view, string ИмяУстановки, XYZ xyz )
+    public static void CreateFromBd_withoutTransaction(Document document, ref СекцияБазыДанных section,
+        View target, string installationName, XYZ origin)
     {
-
-        
-        
-        var mass = new List<ElementId>();
-                            foreach (var o in section.Оборудование)  //Группы
-                            {
-                                
-                                FamilyInstance fi = doc.Create.NewFamilyInstance(o.Location + xyz, o.FamilySymbol, new_view);
-                                fi.LookupParameter("Габарит_высота").Set(o.Габарит_высота);
-                                fi.LookupParameter("Габарит_ширина").Set(o.Габарит_ширина);
-                                fi.LookupParameter("ADSK_Наименование").Set(o.Наименование);
-                                fi.LookupParameter("ADSK_Наименование краткое").Set(o.НаименованиеКраткое);
-                                fi.LookupParameter("ADSK_Позиция").Set(o.Позиция);
-                                fi.LookupParameter("ADSK_Примечание").Set(o.Примечание);
-                                
-                                
-                                fi.LookupParameter("_ГОСТ 21.208").Set(o._ГОСТ212008);
-                                fi.LookupParameter("_Принцип").Set(o._Принцип);
-                                fi.LookupParameter("_Типизация").Set(o._Типизация);
-                                //fi.LookupParameter("_Установка").Set(t._Установка);
-                                fi.LookupParameter("_Установка").Set(ИмяУстановки);
-                                fi.LookupParameter("_Элемент_на_щите").Set(o._Элемент_на_щите);
-                                fi.LookupParameter("CJ_Рабочий набор").Set(new_view.Name);
-                                fi.LookupParameter("NS_ElementId").Set(o.NS_ElementId);//Здесь находится ссылка на ID оборудования
-                                fi.LookupParameter("_Din").Set(o._Din);
-                                fi.LookupParameter("_Dout").Set(o._Dout);
-                                fi.LookupParameter("_Ain").Set(o._Ain);
-                                fi.LookupParameter("_Aout").Set(o._Aout);
-                                fi.LookupParameter("_HMI").Set(o._HMI);
-                                fi.LookupParameter("_Interface").Set(o._Interface);
-                                
-                                section.MarkaMethod(o.Марка, doc, new_view, fi, xyz);
-                                
-                                mass.Add(fi.Id);
-                                
-                            }
-                            if (mass.Count>0){new_view.HideElements(mass);}
-                            
-                            foreach (var t in section.Точки)  //Точки и марки
-                            {
-                                FamilyInstance fi = doc.Create.NewFamilyInstance(t.Location + xyz, t.FamilySymbol, new_view);
-                                
-                                fi.LookupParameter("_ГОСТ 21.208").Set(t._ГОСТ212008);
-                                fi.LookupParameter("_Принцип").Set(t._Принцип);
-                                fi.LookupParameter("_Типизация").Set(t._Типизация);
-                                //fi.LookupParameter("_Установка").Set(t._Установка);
-                                fi.LookupParameter("_Установка").Set(ИмяУстановки);
-                                fi.LookupParameter("_Элемент_на_щите").Set(t._Элемент_на_щите);
-                                fi.LookupParameter("CJ_Рабочий набор").Set(new_view.Name);
-                                fi.LookupParameter("NS_ElementId").Set(t.NS_ElementId);//Здесь находится ссылка на ID оборудования
-                                fi.LookupParameter("_Din").Set(t._Din);
-                                fi.LookupParameter("_Dout").Set(t._Dout);
-                                fi.LookupParameter("_Ain").Set(t._Ain);
-                                fi.LookupParameter("_Aout").Set(t._Aout);
-                                fi.LookupParameter("_HMI").Set(t._HMI);
-                                fi.LookupParameter("_Interface").Set(t._Interface);
-
-                                section.MarkaMethod(t.Марка, doc, new_view, fi, xyz);
-
-
-
-
-
-
-                            }
-                            foreach (var g in section.Группы)  //Группы
-                            {
-                                Group group = doc.Create.PlaceGroup(g.Location + xyz, g.Group.GroupType);
-                            }
-
-                            foreach (var l in section.Линии)  //Линии
-                            {
-                                var line = Autodesk.Revit.DB.Line.CreateBound(l.Begin + xyz, l.End + xyz);
-                                DetailCurve dc = doc.Create.NewDetailCurve(new_view, line); dc.LineStyle = l.GraphicsStyle;
-                            }
-                            
-                            foreach (var t in section.Texts)  //Текст
-                            {
-                                
-                                TextNoteOptions textNoteOptions = new TextNoteOptions(t.TextNote.TextNoteType.Id);
-
-                                textNoteOptions.Rotation = t.TextNote.BaseDirection.AngleTo(new XYZ(1,0,0));
-                                textNoteOptions.HorizontalAlignment = t.TextNote.HorizontalAlignment;
-                                textNoteOptions.VerticalAlignment = t.TextNote.VerticalAlignment;
-                                TextNote textNote = Autodesk.Revit.DB.TextNote.Create(doc, new_view.Id, t.Coord+xyz, t.TextNote.GetFormattedText().GetPlainText(), textNoteOptions);
-                                textNote.SetFormattedText(t.TextNote.GetFormattedText());
-
-                            }
-                            
-                           // xyz = xyz + new XYZ(0.3, 0.2, 0);
-                        
+        var source = document.GetElement(section.FilledRegion.OwnerViewId) as View
+            ?? throw new InvalidOperationException("Не найден исходный вид базы.");
+        var viewTransform = ElementTransformUtils.GetTransformFromViewToView(source, target);
+        var translation = Transform.CreateTranslation(origin - viewTransform.OfPoint(section.Origin));
+        using var options = new CopyPasteOptions();
+        foreach (var item in section.PlacementItems)
+        {
+            var ids = new[] { item.Source.Id }.Concat(item.Tags.Select(t => t.Id)).Distinct().ToList();
+            var copied = ElementTransformUtils.CopyElements(source, ids, target, translation, options)
+                .Select(document.GetElement).Where(x => x != null).ToList();
+            foreach (var family in copied.OfType<FamilyInstance>().Where(x => x.GroupId == ElementId.InvalidElementId))
+            {
+                if (!string.IsNullOrWhiteSpace(installationName))
+                    SetTextIfWritable(family, "_Установка", installationName.Trim());
+                SetTextIfWritable(family, "CJ_Рабочий набор", target.Name);
+            }
+            // Скрытое оборудование остаётся скрытым, а его марки — видимыми.
+            if (item.Hidden)
+            {
+                var hidden = copied.Where(x => x.GetType() == item.Source.GetType()
+                    && x.GroupId == ElementId.InvalidElementId && x.CanBeHidden(target)
+                    && !x.IsHidden(target)).Select(x => x.Id).ToList();
+                if (hidden.Count > 0) target.HideElements(hidden);
+            }
+        }
     }
-    
+
+    private static void SetTextIfWritable(Element element, string name, string value)
+    {
+        var parameter = element.LookupParameter(name);
+        if (parameter != null && !parameter.IsReadOnly && parameter.StorageType == StorageType.String)
+            parameter.Set(value);
+    }
+}
+
+internal sealed class CatalogPlacementItem
+{
+    public Element Source { get; }
+    public IReadOnlyList<IndependentTag> Tags { get; }
+    public bool Hidden { get; }
+    public CatalogPlacementItem(Element source, IReadOnlyList<IndependentTag> tags, bool hidden)
+    { Source = source; Tags = tags; Hidden = hidden; }
 }
 
 public class Линия
@@ -617,6 +406,7 @@ public class Точка
 
     public class СекцияБазыДанных
     {
+        internal List<CatalogPlacementItem> PlacementItems { get; } = new();
         public FilledRegion FilledRegion { get;}
         public string Name { get;}
         public string GroupName { get; }
@@ -652,8 +442,9 @@ public class Точка
             Origin = bb.Min;
         }
 
-        public void MarkaMethod( Марка m, Document doc, View new_view, FamilyInstance fi, XYZ xyz)
+        public void MarkaMethod( Марка? m, Document doc, View new_view, FamilyInstance fi, XYZ xyz)
         {
+            if (m == null) return;
             Reference elRef = new Reference(fi);
             IndependentTag it = IndependentTag.Create(doc, new_view.Id, elRef, true, TagMode.TM_ADDBY_CATEGORY, TagOrientation.Horizontal, m.LocationHeader + xyz);
             it.ChangeTypeId(m.FamilySymbol.Id);

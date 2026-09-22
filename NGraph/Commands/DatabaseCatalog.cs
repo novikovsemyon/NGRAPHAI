@@ -38,7 +38,9 @@ internal static class DatabaseCatalog
                 {
                     var type = new FilteredElementCollector(doc).OfClass(typeof(ViewFamilyType)).Cast<ViewFamilyType>().First(x => x.ViewFamily == ViewFamily.Drafting);
                     target = ViewDrafting.Create(doc, type.Id);
-                    var proposed = "Схема_" + dialog.ИмяУстановки.Text.Trim();
+                    // Для вставки обозначение необязательно; новый вид получит уникальное имя автоматически.
+                    var designation = dialog.ИмяУстановки.Text.Trim();
+                    var proposed = string.IsNullOrWhiteSpace(designation) ? "Схема из базы" : "Схема_" + designation;
                     var names = new HashSet<string>(new FilteredElementCollector(doc).OfClass(typeof(View)).Select(x => x.Name));
                     var unique = proposed; int index = 2;
                     while (names.Contains(unique)) unique = proposed + " (" + index++ + ")";

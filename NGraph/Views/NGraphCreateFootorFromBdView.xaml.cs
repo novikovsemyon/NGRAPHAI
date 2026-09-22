@@ -45,8 +45,8 @@ public sealed partial class NGraphCreateFootorFromBdView
     }
     private void Insert_Click(object sender, RoutedEventArgs e)
     {
-        if (selectedSections == null || string.IsNullOrWhiteSpace(ИмяУстановки.Text))
-        { Status.Text = "Выберите вариант и введите обозначение установки."; return; }
+        if (selectedSections == null)
+        { Status.Text = "Выберите вариант для вставки."; return; }
         Cancel = false; DialogResult = true;
     }
     private void Cancel_Click(object sender, RoutedEventArgs e) => Close();

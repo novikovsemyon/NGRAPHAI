@@ -10,11 +10,12 @@
 </DataGrid.Columns></DataGrid><TextBox Grid.Row="1" x:Name="Details" IsReadOnly="True" TextWrapping="Wrap" VerticalScrollBarVisibility="Auto" Margin="0,12,0,0"/>
 </Grid></Grid>
 <Grid Grid.Row="3" Margin="0,14,0,14">
-    <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
+    <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
     <Grid.ColumnDefinitions><ColumnDefinition Width="220"/><ColumnDefinition/></Grid.ColumnDefinitions>
-    <Label Content="Обозначение установки" Target="{Binding ElementName=ИмяУстановки}"/>
-    <TextBox Grid.Column="1" x:Name="ИмяУстановки"/>
-    <CheckBox Grid.Row="1" Grid.Column="1" x:Name="IsFSAcreate" Content="Построить футор после вставки" Margin="0,12,0,0"/>
+    <Label Content="Установка (необязательно)" Target="{Binding ElementName=ИмяУстановки}"/>
+    <TextBox Grid.Column="1" x:Name="ИмяУстановки" ToolTip="Заполните, только если нужно заменить обозначения из базы"/>
+    <TextBlock Grid.Row="1" Grid.Column="1" Text="Оставьте пустым, чтобы сохранить обозначения из базы." Foreground="#52627A" TextWrapping="Wrap" Margin="0,6,0,0"/>
+    <CheckBox Grid.Row="2" Grid.Column="1" x:Name="IsFSAcreate" Content="Построить футор после вставки" Margin="0,12,0,0"/>
 </Grid>
 <DockPanel Grid.Row="4"><StackPanel DockPanel.Dock="Right" Orientation="Horizontal"><Button Content="Отмена" Click="Cancel_Click"/><Button x:Name="Insert" Content="Построить" Click="Insert_Click" IsDefault="True"/></StackPanel><TextBlock x:Name="Status" TextWrapping="Wrap" VerticalAlignment="Center"/></DockPanel>
 </Grid></Window>
