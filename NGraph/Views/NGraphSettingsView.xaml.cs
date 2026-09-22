@@ -14,6 +14,7 @@ public sealed partial class NGraphSettingsView
 
     public NGraphSettingsView(NGraphSettingsViewModel viewModel)
     {
+        NGraph.Views.DialogTheme.Prepare(this);
         InitializeComponent();
         // Только чтение Revit API, пока команда находится в допустимом API-контексте.
         _viewNames = new FilteredElementCollector(viewModel.Doc)
@@ -22,12 +23,29 @@ public sealed partial class NGraphSettingsView
         ElementsView.ItemsSource = FsaView.ItemsSource = EquipmentView.ItemsSource = _viewNames;
         ProjectName.Text = "Проект: " + viewModel.Doc.Title;
         SettingsPath.Text = UserSettings.FilePath;
+        // Обходим только области и типоразмеры: параметры каталога не требуют сканирования всей модели.
+        var elements = new FilteredElementCollector(viewModel.Doc).OfClass(typeof(FilledRegion)).ToElements()
+            .Concat(new FilteredElementCollector(viewModel.Doc).OfClass(typeof(FilledRegionType)).ToElements());
+        var names = elements.SelectMany(x => x.Parameters.Cast<Parameter>()).Where(x => x.StorageType == StorageType.String)
+            .Select(x => x.Definition.Name).Distinct().OrderBy(x => x).ToList();
+        RegionNameParameter.ItemsSource = RegionGroupParameter.ItemsSource = RegionCodeParameter.ItemsSource = names;
+        RegionType.ItemsSource = new FilteredElementCollector(viewModel.Doc).OfClass(typeof(FilledRegionType)).Select(x => x.Name).OrderBy(x => x).ToList();
+        var types = new FilteredElementCollector(viewModel.Doc).OfClass(typeof(FamilySymbol)).Select(x => x.Name).Distinct().OrderBy(x => x).ToList();
+        EquipmentType.ItemsSource = SignalType.ItemsSource = SignalWithoutTagType.ItemsSource = types;
         Fill(UserSettings.Load(out var warning));
         Status.Text = string.IsNullOrEmpty(warning) ? "Изменения применятся после сохранения при следующем запуске команды." : warning;
     }
 
     private void Fill(UserSettings settings)
     {
+        RegionType.Text = settings.RegionType;
+        RegionNameParameter.Text = settings.RegionNameParameter;
+        RegionGroupParameter.Text = settings.RegionGroupParameter;
+        RegionCodeParameter.Text = settings.RegionCodeParameter;
+        EquipmentType.Text = settings.EquipmentType;
+        SignalType.Text = settings.SignalType;
+        SignalWithoutTagType.Text = settings.SignalWithoutTagType;
+        HovsFolder.Text = settings.HovsFolder;
         ElementsView.Text = settings.ElementsView;
         FsaView.Text = settings.FsaView;
         EquipmentView.Text = settings.EquipmentView;
@@ -52,9 +70,17 @@ public sealed partial class NGraphSettingsView
     {
         var settings = new UserSettings { ElementsView = ElementsView.Text.Trim(), FsaView = FsaView.Text.Trim(),
             EquipmentView = EquipmentView.Text.Trim(), IniDirectory = IniDirectory.Text.Trim() };
-        if (new[] { settings.ElementsView, settings.FsaView, settings.EquipmentView }.Any(string.IsNullOrWhiteSpace))
+        settings.RegionType = RegionType.Text.Trim();
+        settings.RegionNameParameter = RegionNameParameter.Text.Trim();
+        settings.RegionGroupParameter = RegionGroupParameter.Text.Trim();
+        settings.RegionCodeParameter = RegionCodeParameter.Text.Trim();
+        settings.EquipmentType = EquipmentType.Text.Trim();
+        settings.SignalType = SignalType.Text.Trim();
+        settings.SignalWithoutTagType = SignalWithoutTagType.Text.Trim();
+        settings.HovsFolder = HovsFolder.Text.Trim();
+        if (new[] { settings.ElementsView, settings.FsaView, settings.EquipmentView, settings.RegionType, settings.RegionNameParameter, settings.RegionGroupParameter, settings.RegionCodeParameter, settings.EquipmentType, settings.SignalType, settings.SignalWithoutTagType }.Any(string.IsNullOrWhiteSpace))
         {
-            Status.Text = "Заполните имена всех трёх видов базы данных.";
+            Status.Text = "Заполните имена видов, параметров и типов базы данных.";
             return;
         }
         try
@@ -63,6 +89,8 @@ public sealed partial class NGraphSettingsView
             // Стандартная папка может отсутствовать, если INI ещё не используются.
             if (!Directory.Exists(settings.IniDirectory) && settings.IniDirectory != new UserSettings().IniDirectory)
                 throw new IOException("Папка INI не найдена. Проверьте путь.");
+            if (!Path.IsPathRooted(settings.HovsFolder)) throw new IOException("Укажите полный путь к базе ХОВС.");
+            Directory.CreateDirectory(settings.HovsFolder);
             settings.Save();
             DialogResult = true;
         }

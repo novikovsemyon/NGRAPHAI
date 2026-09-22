@@ -27,6 +27,9 @@ jobs:
       - name: Test settings persistence
         run: dotnet run --project tests/NGraph.Settings.Tests -c Release
 
+      - name: Test HOVS import and storage
+        run: dotnet run --project tests/NGraph.Hovs.Tests -c Release
+
       - name: Compile solution
         run: dotnet run -c Release
         working-directory: "build"

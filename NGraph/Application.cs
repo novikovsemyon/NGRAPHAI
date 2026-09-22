@@ -135,6 +135,11 @@ public class Application : ExternalApplication
 
         #endregion
         // Панели располагаются в порядке создания; справка и настройки — справа.
+        var hovs = Application.CreateRibbonPanel(nGraph, "ХОВС");
+        var analyzer = hovs.AddPushButton<HovsWorkspaceCommand>("Объекты и\nанализ ХОВС");
+        analyzer.SetImage("/NGraph;component/Resources/Icons/NG_structura_16.png");
+        analyzer.SetLargeImage("/NGraph;component/Resources/Icons/NG_structura_32.png");
+        analyzer.LongDescription = "Импорт XLSX, разметка колонок, ревизии и локальное обучение на исправлениях.";
         #region Общее
         var panelCom = Application.CreateRibbonPanel(nGraph, "Общее");
 

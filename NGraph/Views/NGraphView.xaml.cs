@@ -12,6 +12,7 @@ public sealed partial class NGraphView
 {
     public NGraphView(NGraphViewModel viewModel)
     {
+        NGraph.Views.DialogTheme.Prepare(this);
         InitializeComponent();
         var assembly = typeof(NGraphView).Assembly;
         var version = assembly.GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion

@@ -12,6 +12,22 @@ public sealed class UserSettings
     public string IniDirectory { get; set; } = Path.Combine(
         Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments), "REVIT", "BETA-BIM", "Настройки");
 
+    public string RegionType { get; set; } = "BD_Готовое решение";
+
+    public string RegionNameParameter { get; set; } = "ADSK_Наименование";
+
+    public string RegionGroupParameter { get; set; } = "ADSK_Группирование";
+
+    public string RegionCodeParameter { get; set; } = "ADSK_Примечание";
+
+    public string EquipmentType { get; set; } = "Окружность 10 мм";
+
+    public string SignalType { get; set; } = "FAS_точка";
+
+    public string SignalWithoutTagType { get; set; } = "FAS_точка_без маркировки";
+
+    public string HovsFolder { get; set; } = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "NGraph", "Hovs");
+
     public static string FilePath => Path.Combine(
         Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "NGraph", "settings.xml");
 
@@ -30,6 +46,14 @@ public sealed class UserSettings
         {
             var root = XDocument.Load(filePath).Root;
             if (root?.Name != "NGraphSettings") throw new InvalidDataException("Неверный формат настроек.");
+            defaults.RegionType = Read(root, nameof(RegionType), defaults.RegionType);
+            defaults.RegionNameParameter = Read(root, nameof(RegionNameParameter), defaults.RegionNameParameter);
+            defaults.RegionGroupParameter = Read(root, nameof(RegionGroupParameter), defaults.RegionGroupParameter);
+            defaults.RegionCodeParameter = Read(root, nameof(RegionCodeParameter), defaults.RegionCodeParameter);
+            defaults.EquipmentType = Read(root, nameof(EquipmentType), defaults.EquipmentType);
+            defaults.SignalType = Read(root, nameof(SignalType), defaults.SignalType);
+            defaults.SignalWithoutTagType = Read(root, nameof(SignalWithoutTagType), defaults.SignalWithoutTagType);
+            defaults.HovsFolder = Read(root, nameof(HovsFolder), defaults.HovsFolder);
             defaults.ElementsView = Read(root, nameof(ElementsView), defaults.ElementsView);
             defaults.FsaView = Read(root, nameof(FsaView), defaults.FsaView);
             defaults.EquipmentView = Read(root, nameof(EquipmentView), defaults.EquipmentView);
@@ -58,6 +82,14 @@ public sealed class UserSettings
         try
         {
             new XDocument(new XElement("NGraphSettings",
+                new XElement(nameof(RegionType), RegionType),
+                new XElement(nameof(RegionNameParameter), RegionNameParameter),
+                new XElement(nameof(RegionGroupParameter), RegionGroupParameter),
+                new XElement(nameof(RegionCodeParameter), RegionCodeParameter),
+                new XElement(nameof(EquipmentType), EquipmentType),
+                new XElement(nameof(SignalType), SignalType),
+                new XElement(nameof(SignalWithoutTagType), SignalWithoutTagType),
+                new XElement(nameof(HovsFolder), HovsFolder),
                 new XElement(nameof(ElementsView), ElementsView), new XElement(nameof(FsaView), FsaView),
                 new XElement(nameof(EquipmentView), EquipmentView), new XElement(nameof(IniDirectory), IniDirectory))).Save(temporary);
             if (File.Exists(filePath)) File.Replace(temporary, filePath, null);

@@ -41,6 +41,7 @@ public class AlgoritmCreateFootorFromBd_del : ExternalCommand
             var viewWindow = new NGraphCreateFootorFromBdView(viewModel);
             
             viewWindow.ShowDialog();
+            if (viewWindow.Cancel || viewWindow.selectedSections == null) return;
 
             var Секция = (СекцияБазыДанных)viewWindow.selectedSections;
 

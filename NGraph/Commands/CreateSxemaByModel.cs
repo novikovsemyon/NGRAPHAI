@@ -45,7 +45,8 @@ namespace NGraph.Commands;
             var viewModel = new NGraphCreateSxemaByModelViewModel();
             viewModel.Doc = Document;
             var viewWindow = new NGraphCreateSxemaByModelView(viewModel);
-            viewWindow.ShowDialog();
+            new System.Windows.Interop.WindowInteropHelper(viewWindow).Owner = Application.MainWindowHandle;
+        viewWindow.ShowDialog();
 
             var wpfParametr = viewWindow.CB_Param.Text;
             var wpfParametrValue = viewWindow.CB_Value.Text;

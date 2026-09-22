@@ -41,7 +41,7 @@ public class AlgoritmCreateFootorWithEquipment : ExternalCommand
      var elementHeaders_FamilyInstance = Document.GetElements(activeViewDrafting.Id).ToElements()// Список оборудования на виде
          .OfType<FamilyInstance>()
          .Where(k => k.get_Parameter(new Guid(Const.Param_NS_Equpment_guid)) != null)
-         .Where(i => i.Name is Const.Element_Header or "Шкаф" or "Empty");
+         .Where(i => i.Name == Const.Element_Header || i.Name is "Шкаф" or "Empty");
      foreach (var fi in elementHeaders_FamilyInstance)
      {
          elementHeaders.Add(new ElementHeader(fi, activeViewDrafting, headers));
@@ -383,4 +383,3 @@ public class AlgoritmCreateFootorWithEquipment : ExternalCommand
 
     }
 }
-

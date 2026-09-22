@@ -1,4 +1,4 @@
-﻿namespace NGraph.Core.FunctionalScheme;
+namespace NGraph.Core.FunctionalScheme;
 
 
     /// <summary>
@@ -17,14 +17,14 @@
         /// <summary>
         /// Имя семейства элемента узла, определяющее оборудование на функциональной схеме
         /// </summary>
-        public const string Element_Header = "Окружность 10 мм";
+        public static string Element_Header => NGraph.Core.UserSettings.Load().EquipmentType;
 
         /// <summary>
         /// Имя семейства элемента узла, определяющее элемент структуры на функциональной схеме
         /// </summary>
-        public const string Element_Header_Users = "FAS_точка";
+        public static string Element_Header_Users => NGraph.Core.UserSettings.Load().SignalType;
         
-        public const string Element_Header_Users_NoTag = "FAS_точка_без маркировки";
+        public static string Element_Header_Users_NoTag => NGraph.Core.UserSettings.Load().SignalWithoutTagType;
         /// <summary>
         /// Имя семейства типовой аннотации, определяющее элемент футора на функциональной схеме
         /// </summary>

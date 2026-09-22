@@ -1,4 +1,4 @@
-﻿
+
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Navigation;
@@ -18,7 +18,8 @@ public sealed partial class NGraphCreateSxemaByModelView
             DataContext = viewModel;
             Elements = new FilteredElementCollector(viewModel.Doc).OfCategory(BuiltInCategory.OST_ElectricalEquipment).WhereElementIsNotElementType().ToElements();
             Helpers helpers = new Helpers();
-            InitializeComponent();
+            NGraph.Views.DialogTheme.Prepare(this);
+        InitializeComponent();
             this.Closing += Window_Closing;
             var GenericAnnotation = helpers.AllElementsOfCategory(viewModel.Doc, BuiltInCategory.OST_GenericAnnotation).ToList(); //Типовые аннотации
             BySpace.IsChecked = true;
@@ -167,6 +168,7 @@ public sealed partial class NGraphCreateSxemaByModelView
         private void CB_Param_SelectionChanged(object sender, SelectionChangedEventArgs e)
         {
             var parameter = CB_Param.SelectedItem as Parameter;
+            if (parameter == null) { CB_Value.ItemsSource = null; return; }
             CB_Value.ItemsSource = GetSrtingLists_forCheckBox(Elements, parameter);
             CB_Value.SelectedIndex = 0;
         }

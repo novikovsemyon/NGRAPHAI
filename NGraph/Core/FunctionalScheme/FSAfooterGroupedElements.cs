@@ -111,9 +111,9 @@
          switch (Name)
          {
                                 
-             case Const.Element_Header_Users:
+             case var value when value == Const.Element_Header_Users:
                  return DataDescription.FooterElementUser(doc, Header.ID, false);
-             case Const.Element_Header_Users_NoTag:
+             case var value when value == Const.Element_Header_Users_NoTag:
                  return DataDescription.FooterElementUser(doc, Header.ID, true);
 
 
