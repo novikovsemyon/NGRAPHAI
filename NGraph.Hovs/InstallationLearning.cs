@@ -879,6 +879,7 @@ public static class TrainingStore
 
             var tokens = (equipment.Attributes ?? new Dictionary<string, string>())
                 .Where(x =>
+                    !x.Key.StartsWith(ProjectDataOverrides.Prefix, StringComparison.OrdinalIgnoreCase) &&
                     !x.Key.StartsWith("__Source", StringComparison.OrdinalIgnoreCase) &&
                     !x.Key.StartsWith("__Raw", StringComparison.OrdinalIgnoreCase) &&
                     !x.Key.StartsWith("__DesignationOccurrence", StringComparison.OrdinalIgnoreCase))
@@ -917,6 +918,7 @@ public static class TrainingStore
             var attrs = equipment.Attributes ?? new Dictionary<string, string>();
             var tokens = attrs
                 .Where(x =>
+                    !x.Key.StartsWith(ProjectDataOverrides.Prefix, StringComparison.OrdinalIgnoreCase) &&
                     !x.Key.StartsWith("__Source", StringComparison.OrdinalIgnoreCase) &&
                     !x.Key.StartsWith("__Raw", StringComparison.OrdinalIgnoreCase) &&
                     !x.Key.StartsWith("__DesignationOccurrence", StringComparison.OrdinalIgnoreCase))

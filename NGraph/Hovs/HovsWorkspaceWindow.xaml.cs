@@ -107,6 +107,7 @@ public partial class HovsWorkspaceWindow
     }
     private void ShowModel(HovsModel model)
     {
+        CurrentContext.Text = "Открыт объект: " + _project?.Name;
         _model = model; _rows = model.Equipment.Select(x => new HovsRow(x)).ToList();
         Installations.ItemsSource = _rows;
         Relations.ItemsSource = model.Relations;
@@ -146,6 +147,7 @@ public partial class HovsWorkspaceWindow
             _source = revision.SourcePath; _savedState = State();
             Projects.SelectedItem = Projects.Items.Cast<HovsProject>().FirstOrDefault(x => x.Id == project.Id);
             Revisions.ItemsSource = _repository.Revisions(project);
+            CurrentContext.Text = "Объект: " + project.Name + " · " + revision.Name;
             Status.Text = "Сохранено в объект «" + project.Name + "». Предыдущие ревизии сохранены.";
         }
         catch (Exception ex) { Error(ex); }
@@ -181,7 +183,9 @@ public partial class HovsWorkspaceWindow
     {
         if (SourceText == null) return;
         if (Installations.SelectedItem is not HovsRow row) { SourceText.Clear(); return; }
-        var lines = row.Equipment.Attributes.Select(a => {
+        var cells = row.Equipment.Attributes.Where(a => a.Key.StartsWith(SourceCellCodec.Prefix)).ToList();
+        if (cells.Count == 0) cells = row.Equipment.Attributes.Where(a => !a.Key.StartsWith("__")).ToList();
+        var lines = cells.Select(a => {
             if (SourceCellCodec.TryDecode(a.Value, out var header, out var value)) return header + ": " + value;
             return a.Key + ": " + a.Value; });
         SourceText.Text = row.Evidence + "\n\n" + string.Join("\n", lines);
