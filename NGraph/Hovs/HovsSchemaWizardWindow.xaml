@@ -1,12 +1,12 @@
 <Window x:Class="HOVS.Plugin.HovsSchemaWizardWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        Title="NGrapfAI — Структура ХОВС"
+        Title="NGraph — Структура ХОВС"
         Height="780" Width="1180"
         MinHeight="650" MinWidth="940"
         WindowStartupLocation="CenterOwner"
         ResizeMode="CanResize">
-    <Grid Margin="16">
+    <Grid Margin="24">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="Auto"/>
@@ -16,73 +16,42 @@
 
         <StackPanel Grid.Row="0" Margin="0,0,0,12">
             <TextBlock Text="Разметка структуры ХОВС"
-                       FontSize="21"
-                       FontWeight="SemiBold"/>
+                       Style="{StaticResource Heading}"/>
             <TextBlock Margin="0,5,0,0"
-                       Foreground="#FF555555"
+                       Foreground="#52627A"
                        TextWrapping="Wrap"
-                       Text="NGrapfAI не узнал этот формат с достаточной уверенностью. Выберите лист и укажите назначение столбцов. Несколько столбцов можно назначить одному элементу (например, ТО1): их значения будут собраны вместе. Разметка сохранится как профиль и будет использоваться при следующих загрузках."/>
+                       Text="Выберите лист и укажите назначение столбцов. Несколько столбцов можно назначить одному элементу (например, ТО1): их значения будут собраны вместе. Разметка сохранится как профиль и будет использоваться при следующих загрузках."/>
         </StackPanel>
 
         <Border Grid.Row="1"
-                BorderBrush="#FFD3D3D3"
+                BorderBrush="#D5DDE9"
                 BorderThickness="1"
-                Background="#FFF8F8F8"
+                Background="#F4F7FC"
                 Padding="10"
                 Margin="0,0,0,10">
-            <Grid>
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="Auto"/>
-                    <ColumnDefinition Width="240"/>
-                    <ColumnDefinition Width="Auto"/>
-                    <ColumnDefinition Width="60"/>
-                    <ColumnDefinition Width="Auto"/>
-                    <ColumnDefinition Width="60"/>
-                    <ColumnDefinition Width="Auto"/>
-                    <ColumnDefinition Width="60"/>
-                    <ColumnDefinition Width="Auto"/>
-                    <ColumnDefinition Width="*"/>
-                </Grid.ColumnDefinitions>
-
-                <TextBlock Grid.Column="0" Text="Лист:" VerticalAlignment="Center" Margin="0,0,7,0"/>
-                <ComboBox x:Name="SheetComboBox"
-                          Grid.Column="1"
-                          Height="28"
-                          VerticalContentAlignment="Center"
-                          SelectionChanged="SheetComboBox_SelectionChanged"/>
-
-                <TextBlock Grid.Column="2" Text="Заголовок с:" VerticalAlignment="Center" Margin="14,0,6,0"/>
-                <TextBox x:Name="HeaderRowTextBox" Grid.Column="3" Height="28" VerticalContentAlignment="Center"/>
-
-                <TextBlock Grid.Column="4" Text="по:" VerticalAlignment="Center" Margin="8,0,6,0"/>
-                <TextBox x:Name="LastHeaderRowTextBox" Grid.Column="5" Height="28" VerticalContentAlignment="Center"/>
-
-                <TextBlock Grid.Column="6" Text="Данные с:" VerticalAlignment="Center" Margin="12,0,6,0"/>
-                <TextBox x:Name="FirstDataRowTextBox" Grid.Column="7" Height="28" VerticalContentAlignment="Center"/>
-
-                <Button Grid.Column="8"
-                        Content="Перечитать"
-                        Width="95"
-                        Height="28"
-                        Margin="10,0,8,0"
-                        Click="Rebuild_Click"/>
-
-                <Grid Grid.Column="9">
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="Auto"/>
-                        <ColumnDefinition Width="*"/>
-                    </Grid.ColumnDefinitions>
-                    <TextBlock Text="Профиль:"
-                               VerticalAlignment="Center"
-                               Margin="0,0,6,0"/>
-                    <TextBox x:Name="ProfileNameTextBox"
-                             Grid.Column="1"
-                             Height="28"
-                             MinWidth="160"
-                             VerticalContentAlignment="Center"
-                             ToolTip="Название сохраняемого профиля ХОВС"/>
-                </Grid>
-            </Grid>
+            <WrapPanel>
+                <StackPanel Width="220" Margin="0,0,16,8">
+                    <Label Content="Лист" Target="{Binding ElementName=SheetComboBox}"/>
+                    <ComboBox x:Name="SheetComboBox" SelectionChanged="SheetComboBox_SelectionChanged"/>
+                </StackPanel>
+                <StackPanel Margin="0,0,16,8">
+                    <Label Content="Строки заголовка" Target="{Binding ElementName=HeaderRowTextBox}"/>
+                    <StackPanel Orientation="Horizontal">
+                        <TextBox x:Name="HeaderRowTextBox" Width="60"/>
+                        <TextBlock Text="—" VerticalAlignment="Center" Margin="8,0"/>
+                        <TextBox x:Name="LastHeaderRowTextBox" Width="60" ToolTip="Последняя строка заголовка"/>
+                    </StackPanel>
+                </StackPanel>
+                <StackPanel Margin="0,0,16,8">
+                    <Label Content="Данные со строки" Target="{Binding ElementName=FirstDataRowTextBox}"/>
+                    <TextBox x:Name="FirstDataRowTextBox" Width="120" HorizontalAlignment="Left"/>
+                </StackPanel>
+                <StackPanel Width="220" Margin="0,0,16,8">
+                    <Label Content="Название профиля" Target="{Binding ElementName=ProfileNameTextBox}"/>
+                    <TextBox x:Name="ProfileNameTextBox" ToolTip="Название сохраняемого профиля ХОВС"/>
+                </StackPanel>
+                <Button Content="Перечитать" VerticalAlignment="Bottom" Margin="0,0,0,8" Click="Rebuild_Click"/>
+            </WrapPanel>
         </Border>
 
         <DataGrid x:Name="ColumnsGrid"
@@ -109,7 +78,7 @@
                                     IsReadOnly="True"
                                     Binding="{Binding Samples}"/>
                 <DataGridComboBoxColumn x:Name="SemanticColumn"
-                                        Header="Назначение в NGrapfAI"
+                                        Header="Назначение в NGraph"
                                         Width="240"
                                         SelectedItemBinding="{Binding SelectedSemantic, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>
             </DataGrid.Columns>
@@ -133,13 +102,9 @@
 
             <WrapPanel Grid.Column="1" HorizontalAlignment="Right" VerticalAlignment="Bottom">
                 <Button Content="Отмена" IsCancel="True"
-                        Width="100"
-                        Height="32"
                         Margin="6,0,0,0"
                         />
                 <Button Content="Подтвердить и запомнить"
-                        Width="190"
-                        Height="32"
                         Margin="8,0,0,0"
                         IsDefault="True"
                         Click="Accept_Click"/>
