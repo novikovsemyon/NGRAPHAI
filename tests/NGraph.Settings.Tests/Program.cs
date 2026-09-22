@@ -19,8 +19,10 @@ try
     Check(warning == "" && loaded.ElementsView == settings.ElementsView && loaded.FsaView == settings.FsaView
         && loaded.EquipmentView == settings.EquipmentView && loaded.IniDirectory == directory, "Unicode/XML round trip");
     settings.ElementsView = "Новая база";
+    settings.RegionNameParameter = "Пользовательское имя";
     settings.SaveTo(file);
     Check(UserSettings.LoadFrom(file, out warning).ElementsView == "Новая база", "Atomic replacement");
+    Check(UserSettings.LoadFrom(file, out warning).RegionNameParameter == "Пользовательское имя", "Parameter mapping persistence");
     Check(Directory.GetFiles(directory, "*.tmp").Length == 0, "Temporary file cleanup");
     File.WriteAllText(file, "<NGraphSettings><ElementsView> </ElementsView></NGraphSettings>");
     Check(UserSettings.LoadFrom(file, out warning).ElementsView == defaults.ElementsView && warning == "", "Missing fields fall back");

@@ -41,7 +41,7 @@ public class FSAmodelCreateFromDb
             
         var filledRegions = elements
             .OfType<FilledRegion>()
-            .Where(region => NgContext._FindParameter(region, "Тип")?.AsValueString()?.Contains("BD_") == true)
+            .Where(region => Document.GetElement(region.GetTypeId())?.Name == UserSettings.Load().RegionType)
             .ToList();
             
         foreach (var VARIABLE in filledRegions)
@@ -619,6 +619,8 @@ public class Точка
     {
         public FilledRegion FilledRegion { get;}
         public string Name { get;}
+        public string GroupName { get; }
+        public string Code { get; }
         public string Type { get; }
         public XYZ Габариты { get; }
         public XYZ Центр { get;}
@@ -637,8 +639,13 @@ public class Точка
             FilledRegion = filledRegion;
             //Elements = elements;
             //ElementsIds = Elements.ConvertAll<ElementId>(x=>x.Id);
-            Name = filledRegion.LookupParameter("ADSK_Примечание").AsString();
-            Type = filledRegion.LookupParameter("Тип").AsValueString();
+            var settings = UserSettings.Load();
+            string Read(string name) => NgContext._FindParameter(filledRegion, name)?.AsString() ?? "";
+            Code = Read(settings.RegionCodeParameter);
+            Name = Read(settings.RegionNameParameter);
+            if (string.IsNullOrWhiteSpace(Name)) Name = Code;
+            GroupName = Read(settings.RegionGroupParameter);
+            Type = filledRegion.Document.GetElement(filledRegion.GetTypeId())?.Name ?? "";
             var bb = filledRegion.get_BoundingBox(view);
             Габариты = bb.Max - bb.Min;
             Центр = Габариты / 2;

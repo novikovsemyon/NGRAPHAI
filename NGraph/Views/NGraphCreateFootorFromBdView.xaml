@@ -1,97 +1,14 @@
-﻿<Window
-    x:Class="NGraph.Views.NGraphCreateFootorFromBdView"
-    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
-    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
-    xmlns:viewModel="clr-namespace:NGraph.ViewModels"
-    mc:Ignorable="d"
-    d:DataContext="{d:DesignInstance viewModel:NGraphSettingsViewModel}"
-    ResizeMode="NoResize"
-    WindowStartupLocation="CenterScreen"
-    Title="Конструктор функциональных схем"
-    Height="150"
-    Width="1000">
-   
-     <Grid ShowGridLines="False">
-     <Grid.RowDefinitions>
-         <RowDefinition Height="0.1*"></RowDefinition>
-         <RowDefinition Height="0.1*"></RowDefinition>
-         <RowDefinition Height="0.1*"></RowDefinition>
-         <RowDefinition Height="0.1*"></RowDefinition>
-         <RowDefinition Height="0.1*"></RowDefinition>
-         
-
-     </Grid.RowDefinitions>
-     <Grid.ColumnDefinitions>
-    
-         <ColumnDefinition Width="1*"></ColumnDefinition>
-         <ColumnDefinition Width="1*"></ColumnDefinition>
-         <ColumnDefinition Width="1*"></ColumnDefinition>
-         <ColumnDefinition Width="1*"></ColumnDefinition>
-         <ColumnDefinition Width="1*"></ColumnDefinition>
-         
-     </Grid.ColumnDefinitions>
-
-     
-
-<!--
-     <RadioButton x:Name="RB_out" Content="Вытяжка" HorizontalAlignment="Left" Grid.Column="0" Grid.Row="2" VerticalAlignment="Center" Checked="RB_out_Checked"/>
-     <RadioButton x:Name="RB_in" Content="Приточка" HorizontalAlignment="Left" Grid.Column="0" Grid.Row="6" VerticalAlignment="Center" Checked="RB_in_Checked"/>
-     <RadioButton x:Name="RB_in_out" Content="Приточно-вытяжная" HorizontalAlignment="Left" Grid.Column="0" Grid.Row="4" VerticalAlignment="Center" Checked="RB_in_out_Checked"/>
-     <RadioButton x:Name="RB_individual" Content="Готовое решение" HorizontalAlignment="Left" Grid.Column="0" Grid.Row="9" VerticalAlignment="Center" Checked="RB_individual_Checked"/>
-     <RadioButton x:Name="RB_fromFile" Content="Из ХОВС (.xlsx)" HorizontalAlignment="Left" Grid.Column="0" Grid.Row="12" VerticalAlignment="Center"/>
-     <RadioButton x:Name="RB_fromRevit" Content="Из связи Revit" HorizontalAlignment="Left" Grid.Column="0" Grid.Row="15" VerticalAlignment="Center"/>
-
-     <ComboBox Grid.Column="4" Grid.Row="5" Grid.ColumnSpan="2" />
-     <CheckBox Grid.Column="4" Content="Рекуператор" HorizontalAlignment="Center" Grid.Row="4" Grid.ColumnSpan="2" VerticalAlignment="Center" IsChecked="True" IsEnabled="False"/>
-
-     <ComboBox Grid.Column="2" Grid.Row="5"/>
-     <CheckBox Grid.Column="2" Content="Ф 1" HorizontalAlignment="Center" Grid.Row="4" VerticalAlignment="Center"  IsChecked="True"/>
-     <ComboBox Grid.Column="3" Grid.Row="5"/>
-     <CheckBox Grid.Column="3" Content="Ф 2" HorizontalAlignment="Center" Grid.Row="4" VerticalAlignment="Center" IsChecked="True"/>
-
-     <ComboBox x:Name="Заслонка1селект" Grid.Column="1" Grid.Row="3"/>
-     <CheckBox x:Name="Заслонка1" Grid.Column="1" Content="Заслонка" HorizontalAlignment="Center" Grid.Row="2" VerticalAlignment="Center" IsChecked="True" />
-     <ComboBox x:Name="Заслонка2селект" Grid.Row="6" Grid.ColumnSpan="3" Height="25" Margin="133,0,66,24" Grid.RowSpan="3" VerticalAlignment="Bottom"/>
-     <CheckBox x:Name="Заслонка2" Grid.Column="1" Content="Заслонка" HorizontalAlignment="Center" Grid.Row="6" VerticalAlignment="Center" IsChecked="True" />
-
-     <ComboBox Grid.Column="8" Grid.Row="7"/>
-     <CheckBox Grid.Column="8" Content="Мотор" HorizontalAlignment="Center" Grid.Row="6" VerticalAlignment="Center" />
-
-     <ComboBox Grid.Column="8" Grid.Row="3"/>
-     <CheckBox Grid.Column="8" Content="Мотор" HorizontalAlignment="Center" Grid.Row="2" VerticalAlignment="Center" />
-
-     <ComboBox Grid.Column="6" Grid.Row="5" Grid.ColumnSpan="2"/>
-     <CheckBox Grid.Column="6" Content="ТО 1" HorizontalAlignment="Center" Grid.Row="4" Grid.ColumnSpan="2" VerticalAlignment="Center"/>
-     <ComboBox Grid.Column="6" Grid.Row="7" Grid.ColumnSpan="2"/>
-     <CheckBox Grid.Column="6" Content="ТО 2" HorizontalAlignment="Center" Grid.Row="6" Grid.ColumnSpan="2" VerticalAlignment="Center"/>
-
-     <ComboBox Grid.Column="10" Grid.Row="7"/>
-     <CheckBox Grid.Column="10" Content="Датчик" HorizontalAlignment="Center" Grid.Row="6" VerticalAlignment="Center" />
-
-     <ComboBox Grid.Column="10" Grid.Row="3"/>
-     <CheckBox Grid.Column="10" Content="Датчик" HorizontalAlignment="Center" Grid.Row="2" VerticalAlignment="Center" />
-
-     <ComboBox Grid.Column="9" Grid.Row="3"/>
-     <CheckBox Grid.Column="9" Content="Ф 3" HorizontalAlignment="Center" Grid.Row="2" VerticalAlignment="Center" />
-
-     <ComboBox Grid.Column="9" Grid.Row="7"/>
-     <CheckBox Grid.Column="9" Content="Ф 4" HorizontalAlignment="Center" Grid.Row="6" VerticalAlignment="Center" />
-
-     <ComboBox x:Name="CB_individual" Grid.Column="0" Grid.Row="0" Grid.ColumnSpan="5" SelectionChanged="CB_individual_SelectionChanged"/>  
-     -->
-     <TextBox x:Name="ИмяУстановки" Grid.Column="0" Grid.Row="2" Width="250" Grid.ColumnSpan="5" SelectedText="Введите название установки" HorizontalAlignment="Left" MouseDoubleClick="MouseEnter"/>
-<CheckBox x:Name="IsFSAcreate" Grid.Column="0" Content="Построить футер для выбранной установки" HorizontalAlignment="Left" Grid.Row="1" Grid.ColumnSpan="2" VerticalAlignment="Center" IsChecked="True" Checked="IsFSAcreate_Checked" Unchecked="IsFSAcreate_Unchecked" />
-     <Button Content="Построить" Grid.Column="0" HorizontalAlignment="Center" Grid.Row="4" VerticalAlignment="Center" Click="Button_Click"/>
-    
-<ComboBox x:Name="selectedSectionsEmpty" Grid.Column="0" Grid.Row="0" Grid.ColumnSpan="5" SelectionChanged="CB_individual_SelectionChangedEmpty"/>
-
-
-
-
-
- </Grid>
-
-
-</Window>
+<Window x:Class="NGraph.Views.NGraphCreateFootorFromBdView" xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" Title="NGraph — База данных" Width="1040" Height="720" MinWidth="850" MinHeight="560">
+<Grid Margin="24"><Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition/><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
+<StackPanel><TextBlock x:Name="HeadingText" Style="{StaticResource Heading}"/><TextBlock Text="Выберите группу и вариант. Название и код берутся из параметров цветовой области." Style="{StaticResource Body}"/></StackPanel>
+<TextBox Grid.Row="1" x:Name="Search" Margin="0,0,0,14" TextChanged="Filter_Changed" ToolTip="Поиск по наименованию, группе и коду"/>
+<Grid Grid.Row="2"><Grid.ColumnDefinitions><ColumnDefinition Width="200"/><ColumnDefinition Width="8"/><ColumnDefinition/></Grid.ColumnDefinitions>
+<GroupBox Header="Группы"><ListBox x:Name="Groups" SelectionChanged="Group_Changed"/></GroupBox><GridSplitter Grid.Column="1" Width="6" HorizontalAlignment="Center"/>
+<Grid Grid.Column="2"><Grid.RowDefinitions><RowDefinition/><RowDefinition Height="110"/></Grid.RowDefinitions>
+<DataGrid x:Name="Items" IsReadOnly="True" AutoGenerateColumns="False" SelectionMode="Single" SelectionChanged="Item_Changed"><DataGrid.Columns>
+<DataGridTextColumn Header="Наименование" Binding="{Binding Name}" Width="*"/><DataGridTextColumn Header="Группа" Binding="{Binding GroupName}" Width="160"/><DataGridTextColumn Header="Код" Binding="{Binding Code}" Width="140"/>
+</DataGrid.Columns></DataGrid><TextBox Grid.Row="1" x:Name="Details" IsReadOnly="True" TextWrapping="Wrap" VerticalScrollBarVisibility="Auto" Margin="0,12,0,0"/>
+</Grid></Grid>
+<Grid Grid.Row="3" Margin="0,14,0,14"><Grid.ColumnDefinitions><ColumnDefinition Width="220"/><ColumnDefinition/></Grid.ColumnDefinitions><Label Content="Обозначение установки" Target="{Binding ElementName=ИмяУстановки}"/><TextBox Grid.Column="1" x:Name="ИмяУстановки"/><CheckBox Grid.Column="1" x:Name="IsFSAcreate" Content="Построить футер после вставки" Margin="0,45,0,0"/></Grid>
+<DockPanel Grid.Row="4"><StackPanel DockPanel.Dock="Right" Orientation="Horizontal"><Button Content="Отмена" Click="Cancel_Click"/><Button x:Name="Insert" Content="Построить" Click="Insert_Click" IsDefault="True"/></StackPanel><TextBlock x:Name="Status" TextWrapping="Wrap" VerticalAlignment="Center"/></DockPanel>
+</Grid></Window>

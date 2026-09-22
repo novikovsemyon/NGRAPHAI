@@ -14,6 +14,7 @@ public sealed partial class NGraphNumberingSheetsView
     {
         DataContext = viewModel;
         _sheets = viewModel.Sheets;
+        NGraph.Views.DialogTheme.Prepare(this);
         InitializeComponent();
 
         var parameters = _sheets

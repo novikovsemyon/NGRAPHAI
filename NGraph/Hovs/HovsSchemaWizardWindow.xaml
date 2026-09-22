@@ -1,0 +1,149 @@
+<Window x:Class="HOVS.Plugin.HovsSchemaWizardWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="NGrapfAI — Структура ХОВС"
+        Height="780" Width="1180"
+        MinHeight="650" MinWidth="940"
+        WindowStartupLocation="CenterOwner"
+        ResizeMode="CanResize">
+    <Grid Margin="16">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <StackPanel Grid.Row="0" Margin="0,0,0,12">
+            <TextBlock Text="Разметка структуры ХОВС"
+                       FontSize="21"
+                       FontWeight="SemiBold"/>
+            <TextBlock Margin="0,5,0,0"
+                       Foreground="#FF555555"
+                       TextWrapping="Wrap"
+                       Text="NGrapfAI не узнал этот формат с достаточной уверенностью. Выберите лист и укажите назначение столбцов. Несколько столбцов можно назначить одному элементу (например, ТО1): их значения будут собраны вместе. Разметка сохранится как профиль и будет использоваться при следующих загрузках."/>
+        </StackPanel>
+
+        <Border Grid.Row="1"
+                BorderBrush="#FFD3D3D3"
+                BorderThickness="1"
+                Background="#FFF8F8F8"
+                Padding="10"
+                Margin="0,0,0,10">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="240"/>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="60"/>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="60"/>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="60"/>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="*"/>
+                </Grid.ColumnDefinitions>
+
+                <TextBlock Grid.Column="0" Text="Лист:" VerticalAlignment="Center" Margin="0,0,7,0"/>
+                <ComboBox x:Name="SheetComboBox"
+                          Grid.Column="1"
+                          Height="28"
+                          VerticalContentAlignment="Center"
+                          SelectionChanged="SheetComboBox_SelectionChanged"/>
+
+                <TextBlock Grid.Column="2" Text="Заголовок с:" VerticalAlignment="Center" Margin="14,0,6,0"/>
+                <TextBox x:Name="HeaderRowTextBox" Grid.Column="3" Height="28" VerticalContentAlignment="Center"/>
+
+                <TextBlock Grid.Column="4" Text="по:" VerticalAlignment="Center" Margin="8,0,6,0"/>
+                <TextBox x:Name="LastHeaderRowTextBox" Grid.Column="5" Height="28" VerticalContentAlignment="Center"/>
+
+                <TextBlock Grid.Column="6" Text="Данные с:" VerticalAlignment="Center" Margin="12,0,6,0"/>
+                <TextBox x:Name="FirstDataRowTextBox" Grid.Column="7" Height="28" VerticalContentAlignment="Center"/>
+
+                <Button Grid.Column="8"
+                        Content="Перечитать"
+                        Width="95"
+                        Height="28"
+                        Margin="10,0,8,0"
+                        Click="Rebuild_Click"/>
+
+                <Grid Grid.Column="9">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="*"/>
+                    </Grid.ColumnDefinitions>
+                    <TextBlock Text="Профиль:"
+                               VerticalAlignment="Center"
+                               Margin="0,0,6,0"/>
+                    <TextBox x:Name="ProfileNameTextBox"
+                             Grid.Column="1"
+                             Height="28"
+                             MinWidth="160"
+                             VerticalContentAlignment="Center"
+                             ToolTip="Название сохраняемого профиля ХОВС"/>
+                </Grid>
+            </Grid>
+        </Border>
+
+        <DataGrid x:Name="ColumnsGrid"
+                  Grid.Row="2"
+                  AutoGenerateColumns="False"
+                  CanUserAddRows="False"
+                  CanUserDeleteRows="False"
+                  IsReadOnly="False"
+                  SelectionMode="Single"
+                  HeadersVisibility="Column"
+                  GridLinesVisibility="Horizontal"
+                  AlternatingRowBackground="#FFF7F9FC">
+            <DataGrid.Columns>
+                <DataGridTextColumn Header="Столбец"
+                                    Width="78"
+                                    IsReadOnly="True"
+                                    Binding="{Binding ColumnLabel}"/>
+                <DataGridTextColumn Header="Заголовок XLSX"
+                                    Width="2*"
+                                    IsReadOnly="True"
+                                    Binding="{Binding Header}"/>
+                <DataGridTextColumn Header="Примеры значений"
+                                    Width="3*"
+                                    IsReadOnly="True"
+                                    Binding="{Binding Samples}"/>
+                <DataGridComboBoxColumn x:Name="SemanticColumn"
+                                        Header="Назначение в NGrapfAI"
+                                        Width="240"
+                                        SelectedItemBinding="{Binding SelectedSemantic, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>
+            </DataGrid.Columns>
+        </DataGrid>
+
+        <Grid Grid.Row="3" Margin="0,12,0,0">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="Auto"/>
+            </Grid.ColumnDefinitions>
+
+            <StackPanel Grid.Column="0">
+                <TextBlock x:Name="StatusText"
+                           Foreground="#FF555555"
+                           TextWrapping="Wrap"/>
+                <TextBlock Margin="0,4,0,0"
+                           Foreground="#FF777777"
+                           TextWrapping="Wrap"
+                           Text="Важно: «Расход L» — подтверждающий расход установки. L наружный и L рециркуляционный сохраняются отдельно и не заменяют обязательный расход установки."/>
+            </StackPanel>
+
+            <WrapPanel Grid.Column="1" HorizontalAlignment="Right" VerticalAlignment="Bottom">
+                <Button Content="Отмена" IsCancel="True"
+                        Width="100"
+                        Height="32"
+                        Margin="6,0,0,0"
+                        />
+                <Button Content="Подтвердить и запомнить"
+                        Width="190"
+                        Height="32"
+                        Margin="8,0,0,0"
+                        IsDefault="True"
+                        Click="Accept_Click"/>
+            </WrapPanel>
+        </Grid>
+    </Grid>
+</Window>

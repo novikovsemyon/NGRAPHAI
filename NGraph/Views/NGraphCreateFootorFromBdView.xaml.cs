@@ -1,127 +1,53 @@
-﻿
 using System.Windows;
 using System.Windows.Controls;
-using System.Windows.Navigation;
+using NGraph.Core.FunctionalScheme;
 using NGraph.ViewModels;
-using NGraph.Core;
-
 namespace NGraph.Views;
-
+/// <summary>Каталог по образцу 2.0.37: группы, поиск и детали. Revit изменяется только после подтверждения.</summary>
 public sealed partial class NGraphCreateFootorFromBdView
 {
-    public Object selectedSections {  get; set; }
-    
-
-    public Object Cancel { get; set; }
-
-    public Object CreateFSA { get; set; }
-        public NGraphCreateFootorFromBdView(NGraphCreateFootorFromBdViewModel viewModel)
-        {
-            DataContext = viewModel;
-            Helpers helpers = new Helpers();
-            InitializeComponent();
-//var GenericAnnotation = helpers.AllElementsOfCategory(viewModel.Doc, BuiltInCategory.OST_GenericAnnotation).ToList(); //Типовые аннотации
-//RB_Вытяжка.IsChecked = true;
-            this.Closing += Window_Closing;
-//CB_individual.ItemsSource = viewModel.BD.Секции.Where(x => x.Type == "BD_Готовое решение").GroupBy(x => x.Name).Select(x => x.Key).ToList();
-
-            /*
-            CB_individual.ItemsSource = viewModel.BD.Секции.Where(x => x.Type == "BD_Готовое решение");
-            CB_individual.DisplayMemberPath = "Name";
-            CB_individual.SelectedItem = viewModel.BD.Секции.FirstOrDefault();
-            */
-            selectedSectionsEmpty.ItemsSource = viewModel.Sections;
-            selectedSectionsEmpty.DisplayMemberPath = "Name";
-            selectedSectionsEmpty.SelectedItem = viewModel.Sections.FirstOrDefault();
-
-
-
-        }
-
-        private void Window_Closing(object sender, System.ComponentModel.CancelEventArgs e)
-        {
-            Cancel = true;
-            e.Cancel =false;
-            /*
-            // Диалог подтверждения закрытия
-            MessageBoxResult result = MessageBox.Show(
-                "Вы уверены, что хотите выйти?",
-                "Закрытие окна",
-                MessageBoxButton.YesNo,
-                MessageBoxImage.Question);
-
-            // Если пользователь нажал "Нет", отмена закрытия
-            if (result == MessageBoxResult.No)
-            {
-                e.Cancel = true;
-
-            }
-            */
-        }
-/*
-        private void CB_individual_SelectionChanged(object sender, System.Windows.Controls.SelectionChangedEventArgs e)
-        {
-            selectedSections =CB_individual.SelectedItem;
-            
-        }
-  */      
-        private void CB_individual_SelectionChangedEmpty(object sender, System.Windows.Controls.SelectionChangedEventArgs e)
-        {
-            selectedSections =selectedSectionsEmpty.SelectedItem;
-            
-        }
-
-        private void Button_Click(object sender, RoutedEventArgs e)
-        {
-            Close();
-            Cancel = false;
-        }
-        private void MouseEnter(object sender, RoutedEventArgs e)
-        {
-            ИмяУстановки.Text = "";
-           
-
-        }
-
-        private void RB_individual_Checked(object sender, RoutedEventArgs e)
-        {
-
-        }
-/*
-        private void RB_in_Checked(object sender, RoutedEventArgs e) //Приточка
-        {
-            Заслонка1.IsEnabled = false;
-            Заслонка1селект.IsEnabled = false;
-            Заслонка2.IsEnabled = true;
-            Заслонка2селект.IsEnabled = true;
-        }
-
-        private void RB_in_out_Checked(object sender, RoutedEventArgs e) //ПВ
-        {
-            Заслонка1.IsEnabled = true;
-            Заслонка1селект.IsEnabled = true;
-            Заслонка2.IsEnabled = true;
-            Заслонка2селект.IsEnabled = true;
-
-        }
-
-        private void RB_out_Checked(object sender, RoutedEventArgs e) //Вытяжка
-        {
-            Заслонка1.IsEnabled = true;
-            Заслонка1селект.IsEnabled = true;
-            Заслонка2.IsEnabled = false;
-            Заслонка2селект.IsEnabled = false;
-
-        }
-*/
-        private void IsFSAcreate_Checked(object sender, RoutedEventArgs e)
-        {
-            CreateFSA = true;
-        }
-
-        private void IsFSAcreate_Unchecked(object sender, RoutedEventArgs e)
-        {
-            CreateFSA = false;
-        }
-  
+    private readonly List<СекцияБазыДанных> _sections;
+    public СекцияБазыДанных? selectedSections => Items.SelectedItem as СекцияБазыДанных;
+    public bool Cancel { get; private set; } = true;
+    public bool CreateFSA => IsFSAcreate.IsChecked == true;
+    public NGraphCreateFootorFromBdView(NGraphCreateFootorFromBdViewModel model)
+    {
+        DialogTheme.Prepare(this);
+        InitializeComponent();
+        _sections = model.Sections ?? new List<СекцияБазыДанных>();
+        Title = "NGraph — " + model.Title;
+        HeadingText.Text = model.Title;
+        Groups.ItemsSource = new[] { "Все группы" }.Concat(_sections.Select(x => x.GroupName).Distinct().OrderBy(x => x)).ToList();
+        Groups.SelectedIndex = 0;
+        Insert.Content = model.InsertLabel;
+        Loaded += (_, _) => ApplyFilter();
+    }
+    private void ApplyFilter()
+    {
+        if (_sections == null || Items == null) return;
+        var group = Groups.SelectedItem as string;
+        var search = Search.Text.Trim();
+        var rows = _sections.Where(x => (Groups.SelectedIndex <= 0 || x.GroupName == group) &&
+            (x.Name + " " + x.GroupName + " " + x.Code).IndexOf(search, StringComparison.OrdinalIgnoreCase) >= 0).ToList();
+        Items.ItemsSource = rows;
+        if (rows.Count > 0) Items.SelectedIndex = 0;
+        Insert.IsEnabled = rows.Count > 0;
+        Status.Text = $"Вариантов: {rows.Count} из {_sections.Count}";
+    }
+    private void Filter_Changed(object sender, TextChangedEventArgs e) => ApplyFilter();
+    private void Group_Changed(object sender, SelectionChangedEventArgs e) => ApplyFilter();
+    private void Item_Changed(object sender, SelectionChangedEventArgs e)
+    {
+        if (Details == null) return;
+        var s = selectedSections;
+        Details.Text = s == null ? "Нет выбранного варианта." :
+            $"{s.Name}\nГруппа: {s.GroupName}   Код: {s.Code}\nТип области: {s.Type}\nРазмер: {s.Габариты.X * 304.8:0} × {s.Габариты.Y * 304.8:0} мм";
+    }
+    private void Insert_Click(object sender, RoutedEventArgs e)
+    {
+        if (selectedSections == null || string.IsNullOrWhiteSpace(ИмяУстановки.Text))
+        { Status.Text = "Выберите вариант и введите обозначение установки."; return; }
+        Cancel = false; DialogResult = true;
+    }
+    private void Cancel_Click(object sender, RoutedEventArgs e) => Close();
 }

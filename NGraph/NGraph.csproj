@@ -133,4 +133,5 @@
       </Page>
     </ItemGroup>
 
+  <ItemGroup><ProjectReference Include="../NGraph.Hovs/NGraph.Hovs.csproj"/></ItemGroup>
 </Project>
