@@ -35,6 +35,7 @@ public class NumberingView : ExternalCommand
         };
 
         var viewWindow = new NGraphNumberingSheetsView(viewModel);
+        new System.Windows.Interop.WindowInteropHelper(viewWindow).Owner = Application.MainWindowHandle;
         viewWindow.ShowDialog();
 
         if (viewWindow.Cancel is true)

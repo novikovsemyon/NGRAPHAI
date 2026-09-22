@@ -732,8 +732,8 @@ public static class HovsSchemaProfileStore
 
         var temp = Location + ".tmp";
         new XDocument(root).Save(temp);
-        if (File.Exists(Location)) File.Delete(Location);
-        File.Move(temp, Location);
+        if (File.Exists(Location)) File.Replace(temp, Location, null);
+        else File.Move(temp, Location);
     }
 
     private static string BuildDefaultName(string workbookPath, string worksheetName)

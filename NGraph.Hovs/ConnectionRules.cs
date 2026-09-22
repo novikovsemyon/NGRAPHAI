@@ -19,24 +19,23 @@ public static class ConnectionRules
     {
         var result = new List<Relation>();
 
-        var candidates = equipment.Where(e => !IsExcluded(e)).ToList();
+        var candidates = equipment.Where(e => !IsExcluded(e) && HasPositiveAirflow(e)).ToList();
+        var features = candidates.ToDictionary(e => e, EquipmentFeatureAnalyzer.Analyze);
         var supplies = candidates.Where(IsSupplyOnly).ToList();
         var exhausts = candidates.Where(IsExhaustOnly).ToList();
 
         foreach (var p in supplies)
         foreach (var v in exhausts)
         {
-            var pRecovery = GetRecoveryText(p, components);
-            var vRecovery = GetRecoveryText(v, components);
-            var hasRecovery = !string.IsNullOrWhiteSpace(pRecovery) ||
-                              !string.IsNullOrWhiteSpace(vRecovery);
+            var pRecovery = features[p].RecuperatorType;
+            var vRecovery = features[v].RecuperatorType;
+            var hasRecovery = HasValue(pRecovery) || HasValue(vRecovery);
 
             var sameRoom =
                 !string.IsNullOrWhiteSpace(p.Room) &&
                 p.Room.Equals(v.Room, StringComparison.OrdinalIgnoreCase);
 
-            var sameCore = PairCore(p.Id)
-                .Equals(PairCore(v.Id), StringComparison.OrdinalIgnoreCase);
+            var sameCore = PairCode(p.Id).Equals(PairCode(v.Id), StringComparison.OrdinalIgnoreCase);
 
             var sameFinalCode = FinalCode(p.Id)
                 .Equals(FinalCode(v.Id), StringComparison.OrdinalIgnoreCase);
@@ -80,18 +79,42 @@ public static class ConnectionRules
                 continue;
             }
 
-            if (sameRoom && sameCore)
+            var recirculation = HasValue(features[p].Recirculation) || HasValue(features[v].Recirculation);
+            if (recirculation && (sameRoom || sameCore))
+            {
+                result.Add(new Relation(p.Id, v.Id, RelationKind.Recirculation, .65,
+                    "Кандидат: рециркуляция и совпадение помещения/кода. Требует проверки."));
+                continue;
+            }
+            if (sameRoom)
             {
                 result.Add(new Relation(
                     p.Id,
                     v.Id,
                     RelationKind.SameRoom,
                     0.45,
-                    "Общее помещение и совпадающий код пары; рекуператор явно не указан."));
+                    "Общее помещение; механизм связи требует проверки."));
             }
         }
 
         return result;
+    }
+
+    /// <summary>Жёсткое правило предметной области: обучение не подтверждает установку без L.</summary>
+    public static bool HasPositiveAirflow(Equipment e) => e.Attributes.TryGetValue("__Installation.Airflow", out var raw) &&
+        double.TryParse(raw.Replace(',', '.'), System.Globalization.NumberStyles.Float,
+            System.Globalization.CultureInfo.InvariantCulture, out var flow) && flow > 0 && !double.IsInfinity(flow);
+
+    private static bool HasValue(string value)
+    {
+        var text = (value ?? "").Trim().ToLowerInvariant();
+        return text.Length > 0 && text != "нет" && text != "0" && text != "—" && text != "-" &&
+            !text.StartsWith("не определ") && !text.StartsWith("не указан");
+    }
+    private static string PairCode(string id)
+    {
+        var core = PairCore(id);
+        return core.Length > 0 ? core : (id.Length > 1 ? id.Substring(1) : id);
     }
 
     private static bool IsExcluded(Equipment e)

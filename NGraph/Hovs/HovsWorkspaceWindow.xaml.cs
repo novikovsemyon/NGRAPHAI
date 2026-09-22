@@ -213,8 +213,7 @@ public sealed class HovsRow
         var analysis = EquipmentFeatureAnalyzer.AnalyzeDetailed(equipment);
         Features = analysis.Features; Airflow = analysis.AirflowText;
         Confidence = analysis.InstallationConfidence.ToString("P0"); Evidence = analysis.Evidence;
-        HasAirflow = equipment.Attributes.TryGetValue("__Installation.Airflow",out var raw) &&
-            double.TryParse(raw.Replace(',', '.'),System.Globalization.NumberStyles.Float,System.Globalization.CultureInfo.InvariantCulture,out var flow) && flow > 0;
+        HasAirflow = ConnectionRules.HasPositiveAirflow(equipment);
         Selected = HasAirflow && (!equipment.Attributes.TryGetValue(ProjectDataOverrides.Prefix + "Selected",out var chosen) || chosen == "1");
         Remember();
     }

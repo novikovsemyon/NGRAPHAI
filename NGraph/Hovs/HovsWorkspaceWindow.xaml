@@ -17,6 +17,7 @@
 <DataGridComboBoxColumn x:Name="TypeColumn" Header="Тип" SelectedItemBinding="{Binding Features.InstallationType}" Width="90"/>
 <DataGridTextColumn Header="L, м³/ч" Binding="{Binding Airflow}" IsReadOnly="True" Width="100"/><DataGridTextColumn Header="Распознавание" Binding="{Binding Confidence}" IsReadOnly="True" Width="110"/>
 <DataGridTextColumn Header="Фильтр" Binding="{Binding Features.FilterType}" Width="120"/><DataGridTextColumn Header="Фильтров" Binding="{Binding Features.FilterCount}" Width="90"/>
+<DataGridTextColumn Header="Рециркуляция" Binding="{Binding Features.Recirculation}" Width="110"/>
 <DataGridTextColumn Header="Рекуператор" Binding="{Binding Features.RecuperatorType}" Width="130"/>
 <DataGridTextColumn Header="Теплообменники" Binding="{Binding Features.HeatExchangers}" Width="260"/>
 <DataGridTextColumn Header="Увлажнитель" Binding="{Binding Features.HumidifierType}" Width="130"/>

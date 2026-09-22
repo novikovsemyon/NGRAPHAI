@@ -33,6 +33,15 @@ try
     var noFlow=new Equipment("П3","П3","П","",new Dictionary<string,string>());
     TrainingStore.SaveExplicitCorrection(noFlow,new InstallationFeatures {InstallationType="П"});
     Check(EquipmentFeatureAnalyzer.AnalyzeDetailed(noFlow).InstallationConfidence < .1,"Training cannot bypass airflow rule");
+    Equipment Candidate(string id, string type, string room, bool flow) => new Equipment(id,id,type,room,
+        flow ? new Dictionary<string,string>{{"__Installation.Airflow","100"}} : new Dictionary<string,string>());
+    var supply = Candidate("П10","П","Комната",true);
+    var exhaust = Candidate("В20","В","Комната",true);
+    Check(ConnectionRules.Find(new[]{supply,exhaust},Array.Empty<EquipmentComponent>()).Any(x=>x.Kind==RelationKind.SameRoom),"Same-room candidate");
+    Check(ConnectionRules.Find(new[]{Candidate("П10","П","Комната",false),exhaust},Array.Empty<EquipmentComponent>()).Count==0,"No-L excluded from links");
+    Check(ConnectionRules.Find(new[]{Candidate("ПД10","Другая","Комната",true),exhaust},Array.Empty<EquipmentComponent>()).Count==0,"Smoke control excluded from links");
+    ProjectDataOverrides.Save(supply,new InstallationFeatures {InstallationType="П",Recirculation="Да"},true);
+    Check(ConnectionRules.Find(new[]{supply,exhaust},Array.Empty<EquipmentComponent>()).Any(x=>x.Kind==RelationKind.Recirculation),"Edited recirculation affects inference");
     var repo = new HovsRepository(root); var project=repo.Create("Объект & тест");
     var revision=repo.Save(project,model,source,"Первый импорт");
     ProjectDataOverrides.Save(p, new InstallationFeatures {InstallationType="ПВУ",HeatExchangers="Нагрев: Водяной ×1; Охлаждение: DX ×1"},false);
