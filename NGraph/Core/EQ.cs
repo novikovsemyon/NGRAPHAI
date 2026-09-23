@@ -1,10 +1,10 @@
-﻿using System.IO;
+using System.IO;
 namespace NGraph.Core;
 
 public class EQ
 {
   
-    public string hisNameSymbolForStruct { get; set; } //This is for geting(creating) FamilySymbol
+    public string hisNameSymbolForStruct { get; set; } = string.Empty; //This is for geting(creating) FamilySymbol
     public TypeOfLevel Level { get; set; }
     public FormatSxema formatSxema { get; set; }
     public Orientation OrientationForMarka_ID { get; set; }
@@ -14,18 +14,18 @@ public class EQ
     /// </summary>
     public FormatGrowing FormatGrowing { get; set; }
     public string Помещение_Имя { get; }
-    public string Зона_имя { get; }
+    public string Зона_имя { get; } = "не назначено";
     public string ADSK_Позиция { get; }
     public string ADSK_Марка { get; }
     public string ADSK_Завод_изготовитель { get; }
     public string ADSK_Код_изделия { get; }
     public string ADSK_Номер_контроллера { get; }
-    public string ADSK_Номер_устройства { get; set; }
+    public string ADSK_Номер_устройства { get; set; } = string.Empty;
     public string ADSK_Принадлежность_к_разделу { get; }
     public string ADSK_Наименование { get; }
     public string ADSK_Наименование_краткое { get; }
     public string ADSK_Группирование { get; }
-    public string Имя_панели { get; set; }
+    public string Имя_панели { get; set; } = string.Empty;
     public List<LogicPort> Ports { get; set; } = new List<LogicPort>();
     //public VertexId Vertex { get; }
     public FamilyInstance familyInstance { get; }
@@ -34,7 +34,7 @@ public class EQ
 
 
 
-    public MarkaEQ MarkaEQ { get; set; }
+    public MarkaEQ MarkaEQ { get; set; } = new();
     public int Marka1 { get; set; }
     public int Marka2 { get; set; }
     public int Marka3 { get; set; }
@@ -44,22 +44,24 @@ public class EQ
     public EQ(FamilyInstance fi)
     {
         familyInstance = fi;
-        try
+        var space = fi.Space;
+        Помещение_Имя = space?.Name ?? "нет помещения";
+#if REVIT2027_OR_GREATER
+        // В Revit 2027 прежние HVAC-зоны заменены зонами, связанными с пространствами.
+        if (space is not null)
         {
-            Помещение_Имя = fi.Space.Name;
-            try
-            {
-                Зона_имя = fi.Space.Zone.Name;
-            }
-            catch
-            {
-                Зона_имя = "не назначено";
-            }
+            var zoneNames = new FilteredElementCollector(fi.Document)
+                .OfClass(typeof(Autodesk.Revit.DB.Analysis.GenericZone))
+                .Cast<Autodesk.Revit.DB.Analysis.GenericZone>()
+                .Where(zone => zone.GeometricDefinition == Autodesk.Revit.DB.Analysis.ZoneGeometricDefinition.Spaces
+                    && zone.GetSpaceIds().Contains(space.Id))
+                .Select(zone => zone.Name).Distinct().OrderBy(name => name).ToList();
+            if (zoneNames.Count > 0) Зона_имя = string.Join(", ", zoneNames);
         }
-        catch { Помещение_Имя = "нет помещения"; }
+#else
+        Зона_имя = space?.Zone?.Name ?? "не назначено";
+#endif
 
-
-        //ElementId = el;
         ADSK_Позиция = GetParametrFromElementId("ADSK_Позиция");
         ADSK_Номер_контроллера = GetParametrFromElementId("ADSK_Номер контроллера");
         ADSK_Номер_устройства = GetParametrFromElementId("ADSK_Номер устройства");
@@ -443,13 +445,13 @@ public enum TypeOfLogicPort
 public class MarkaEQ
 {
 
-    public string part1 { get; set; }
-    public string part2 { get; set; }
-    public string part3 { get; set; }
-    public string part4 { get; set; }
-    public string part5 { get; set; }
-    public string part6 { get; set; }
-    public string part7 { get; set; }
+    public string part1 { get; set; } = string.Empty;
+    public string part2 { get; set; } = string.Empty;
+    public string part3 { get; set; } = string.Empty;
+    public string part4 { get; set; } = string.Empty;
+    public string part5 { get; set; } = string.Empty;
+    public string part6 { get; set; } = string.Empty;
+    public string part7 { get; set; } = string.Empty;
 
 
     public int Marka1 { get; set; }

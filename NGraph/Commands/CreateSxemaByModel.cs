@@ -7,7 +7,6 @@ using NGraph.Views;
 using NGraph.ViewModels;
 using NGraph.Core.FunctionalScheme;
 using Nice3point.Revit.Toolkit.External;
-using Autodesk.Revit.Attributes;
 using Autodesk.Revit.Creation;
 namespace NGraph.Commands;
 
@@ -42,8 +41,7 @@ namespace NGraph.Commands;
 
             ///Выбираем по какому параметру и значению будет строиться схема
             ///
-            var viewModel = new NGraphCreateSxemaByModelViewModel();
-            viewModel.Doc = Document;
+            var viewModel = new NGraphCreateSxemaByModelViewModel(Application.ActiveUIDocument.Document);
             var viewWindow = new NGraphCreateSxemaByModelView(viewModel);
             new System.Windows.Interop.WindowInteropHelper(viewWindow).Owner = Application.MainWindowHandle;
         viewWindow.ShowDialog();
@@ -58,68 +56,41 @@ namespace NGraph.Commands;
 
                 //Получаем элементы электрооборудование в модели на основании их параметров (Рабочий набор / ADSK_Группирование /
 
-#if REVIT2020
-
-            var elementsFromModel = helpers.AllElementsOfCategory(Document, BuiltInCategory.OST_ElectricalEquipment)
-
-                // .Where(i => 
-                //  (i.FindParameter("ADSK_Группирование").AsString().Contains("АК_"))).ToList()
-                .Where(j =>
-                (j.LookupParameter(wpfParametr).AsString() == wpfParametrValue)
-                )
-                ;
-
-                
-#else
-
-                var elementsFromModel = helpers.AllElementsOfCategory(Document, BuiltInCategory.OST_ElectricalEquipment)
-
-                .Where(
-                (i =>
-                (NgContext._FindParameter(i,"ADSK_Группирование").AsString().Contains("АК_"))
-                &&
-                (NgContext._FindParameter(i,wpfParametr).AsString()==wpfParametrValue)
-                ));
-
-#endif
+            var elementsFromModel = helpers.AllElementsOfCategory(Application.ActiveUIDocument.Document, BuiltInCategory.OST_ElectricalEquipment)
+                .OfType<FamilyInstance>()
+                .Where(i => NgContext._FindParameter(i, "ADSK_Группирование")?.AsString()?.Contains("АК_") == true
+                    && (NgContext._FindParameter(i, wpfParametr)?.AsString() ?? string.Empty) == wpfParametrValue);
 
                 //Создаем по оборудованию из модели, корпус, этаж, помещение (Заполняем поле Section)
-                foreach (var s in elementsFromModel.GroupBy(i => NgContext._FindParameter((i as FamilyInstance),"ADSK_Номер секции").AsString()))//По каждой секции
+                foreach (var s in elementsFromModel.GroupBy(i => NgContext._FindParameter(i, "ADSK_Номер секции")?.AsString() ?? "Без секции"))//По каждой секции
                 {
                     Section section = new(s.Key);
                     Sections.Add(section);
                     //Группируем по этажу
-#if REVIT2026_OR_GREATER
-                     var groupByLevel = s.GroupBy(i => (i.LevelId.Value)); //Группируем по ID уровня
-#else
-                    var groupByLevel = s.GroupBy(i => (i.LevelId.IntegerValue)); //Группируем по ID уровня
-#endif
+var groupByLevel = s.GroupBy(i => i.LevelId);
                     
                    
 
                     foreach (var e in groupByLevel)
                     {
-                        ElementId elementId = new ElementId(e.Key);
-                        Element level_revit = Document.GetElement(elementId);
-                        LevelOfSection level = new(section, level_revit as Level);
+                        ElementId elementId = e.Key;
+                        var level_revit = Application.ActiveUIDocument.Document.GetElement(elementId) as Level
+                            ?? throw new InvalidOperationException($"Не найден уровень {elementId} для оборудования.");
+                        LevelOfSection level = new(section, level_revit);
                         section.Levels.Add(level);
                         //Группируем по помещению (Пространству)
-#if REVIT2026_OR_GREATER
-                        var groupBySpace = e.GroupBy(i => (i as FamilyInstance).Space.Id.Value);
-#else
-                   var groupBySpace = e.GroupBy(i => (i as FamilyInstance).Space.Id.IntegerValue);
-#endif
+var groupBySpace = e.GroupBy(i => i.Space?.Id ?? ElementId.InvalidElementId);
                        
                         List<EqupmentModel> equpments_on_level = [];
                         foreach (var sp in groupBySpace)
                         {
-                            ElementId elementId_space = new ElementId(sp.Key);
-                            Element space = Document.GetElement(elementId_space);
+                            ElementId elementId_space = sp.Key;
+                            Element space = Application.ActiveUIDocument.Document.GetElement(elementId_space);
                             RoomSpace room = new(level, space as Space);
                             level.RoomSpaces.Add(room);
                             foreach (var eq in sp)
                             {
-                                FamilyInstance fi = eq as FamilyInstance;
+                                FamilyInstance fi = eq;
                                 //Создаем оборудование в помещении
                                 room.EqupmentModels.Add(new(fi, room));
                             }
@@ -142,7 +113,7 @@ namespace NGraph.Commands;
 
 
                 //Создаем чертежный вид и их аннотативные обозначения (элементы узлов)
-                ViewDrafting view = helpers.CreateViewDrafting(Document, "Структурная схема", true, UiDocument);
+                ViewDrafting view = helpers.CreateViewDrafting(Application.ActiveUIDocument.Document, "Структурная схема", true, Application.ActiveUIDocument);
                 //Получаем все оборудование в модели
                 var equipmentModels = GetEqupmentModels(Sections);
                 //Обрабатываем модель
@@ -152,7 +123,7 @@ namespace NGraph.Commands;
                     //Добавляем FamilySymbol
                     eq_m.EQipment(eq_m, true);
                     //Добавляем модель оборудования для чертежного виды (без создания семейства)
-                    eq_m.EqupmentDrafting = new EqupmentDrafting(Document, eq_m, view);
+                    eq_m.EqupmentDrafting = new EqupmentDrafting(Application.ActiveUIDocument.Document, eq_m, view);
                 }
 
 
@@ -181,7 +152,7 @@ namespace NGraph.Commands;
                         i_em++;
 
                     }
-                    rs.Height = rs.Height + g.FirstOrDefault().EqupmentDrafting.Height * koefficient; //Обновляем высоту помещения. Высота в группе по позиции одинакова
+                    rs.Height = rs.Height + g.First().EqupmentDrafting.Height * koefficient; //Обновляем высоту помещения. Высота в группе по позиции одинакова
                     double l_group = g.Sum(i => i.EqupmentDrafting.Length) * koefficient;
                     if (rs.Length < l_group) { rs.Length = l_group; } //Длина помещения - максимальная длина в группе
                 }
@@ -217,7 +188,7 @@ namespace NGraph.Commands;
                         i_em++;
 
                     }
-                    rs.Height = rs.Height + g.FirstOrDefault().EqupmentDrafting.Height * koefficient; //Обновляем высоту помещения. Высота в группе по позиции одинакова
+                    rs.Height = rs.Height + g.First().EqupmentDrafting.Height * koefficient; //Обновляем высоту помещения. Высота в группе по позиции одинакова
                     double l_group = g.Sum(i => i.EqupmentDrafting.Length) * koefficient;
                     if (rs.Length < l_group) { rs.Length = l_group; } //Длина помещения - максимальная длина в группе
                 }
@@ -289,20 +260,20 @@ namespace NGraph.Commands;
                 /////////////////////////////////////////////////
 
                 //Расмещаем семейства
-                using (Transaction tx = new Transaction(Document, "Размещение семейств"))
+                using (Transaction tx = new Transaction(Application.ActiveUIDocument.Document, "Размещение семейств"))
                 {
                     tx.Start("Размещение семейств");
 
-                    var filter = new FilteredElementCollector(Document).OfClass(typeof(TextNoteType));
+                    var filter = new FilteredElementCollector(Application.ActiveUIDocument.Document).OfClass(typeof(TextNoteType));
                     foreach (var s in Sections)
                     {
                         CreateLineBox(s.XYZ_LineConturMin, s.XYZ_LineConturMax, view, [true, false, true, false]);
 
 
 
-                        TextNoteType txtNT_section = filter.First(q => q.Name.Equals("ГОСТ тип А h=5 c=3.5")) as TextNoteType;
+                        TextNoteType txtNT_section = filter.OfType<TextNoteType>().First(q => q.Name.Equals("ГОСТ тип А h=5 c=3.5"));
                         TextNoteOptions textNoteOptions_section = new TextNoteOptions(txtNT_section.Id);
-                        TextNote.Create(Document, view.Id, s.XYZ_LineConturMin, 40 / 304.8, s.Name, textNoteOptions_section);
+                        TextNote.Create(Application.ActiveUIDocument.Document, view.Id, s.XYZ_LineConturMin, 40 / 304.8, s.Name, textNoteOptions_section);
 
                         foreach (var l in s.Levels)
                         {
@@ -310,18 +281,18 @@ namespace NGraph.Commands;
 
                             var elevation_round = Helpers.LenghtInt(l.Elevation, 10); //Округление отметки
 
-                            TextNoteType txtNT_level = filter.First(q => q.Name.Equals("ГОСТ тип А h=3.5 c=2.5")) as TextNoteType;
+                            TextNoteType txtNT_level = filter.OfType<TextNoteType>().First(q => q.Name.Equals("ГОСТ тип А h=3.5 c=2.5"));
                             TextNoteOptions textNoteOptions_level = new TextNoteOptions(txtNT_level.Id);
                             textNoteOptions_level.Rotation = 3.14 / 2;
-                            TextNote.Create(Document, view.Id, l.XYZ_LineConturMin + new XYZ(-5 / 304.8, 5 / 304.8, 0), 60 / 304.8, l.Name + " (отм. " + elevation_round.ToString() + ")", textNoteOptions_level);
+                            TextNote.Create(Application.ActiveUIDocument.Document, view.Id, l.XYZ_LineConturMin + new XYZ(-5 / 304.8, 5 / 304.8, 0), 60 / 304.8, l.Name + " (отм. " + elevation_round.ToString() + ")", textNoteOptions_level);
 
                             foreach (var r in l.RoomSpaces)
                             {
                                 CreateLineBox(r.XYZ_LineConturMin, r.XYZ_LineConturMax, view, [true, true, true, true]);
 
-                                TextNoteType txtNT_room = filter.First(q => q.Name.Equals("ГОСТ тип А h=2 c=1.4")) as TextNoteType;
+                                TextNoteType txtNT_room = filter.OfType<TextNoteType>().First(q => q.Name.Equals("ГОСТ тип А h=2 c=1.4"));
                                 TextNoteOptions textNoteOptions_room = new TextNoteOptions(txtNT_room.Id);
-                                TextNote.Create(Document, view.Id, r.XYZ_LineConturMin + new XYZ(0, 5 / 304.8, 0), 40 / 304.8, r.Name + "  (пом." + r.Number.ToString() + ")", textNoteOptions_room);
+                                TextNote.Create(Application.ActiveUIDocument.Document, view.Id, r.XYZ_LineConturMin + new XYZ(0, 5 / 304.8, 0), 40 / 304.8, r.Name + "  (пом." + r.Number.ToString() + ")", textNoteOptions_room);
 
 
                             
@@ -330,25 +301,25 @@ namespace NGraph.Commands;
 
                             foreach (var e in r.EqupmentModels)
                                 {
-                                    e.EqupmentDrafting.FI = Document.Create.NewFamilyInstance(e.EqupmentDrafting.XYZ_inView, e.EqupmentDrafting.FamilySymbol, view);
+                                    var placedInstance = Application.ActiveUIDocument.Document.Create.NewFamilyInstance(e.EqupmentDrafting.XYZ_inView, e.EqupmentDrafting.FamilySymbol, view);
 
-                                    e.EqupmentDrafting.FI.LookupParameter(Const.Param_NS_ElementId).Set(e.NS_ElementID); //Записываем соответстви ElementId
-                                    e.EqupmentDrafting.FI.LookupParameter(Const.Param_ADSK_Position).Set(e.ADSK_Позиция); //Записываем соответстви ADSK_Позиция
-                                    e.EqupmentDrafting.FI.LookupParameter(Const.Param_ADSK_Group).Set(e.ADSK_Группирование); //Записываем соответстви ADSK_Группирование
-                                    e.EqupmentDrafting.FI.LookupParameter("NS_Имя панели").Set(e.Имя_панели);
-                                    e.EqupmentDrafting.FI.LookupParameter("NS_Текст УГО").Set(e.ADSK_Позиция);
-                                    e.EqupmentDrafting.FI.LookupParameter("ADSK_Наименование краткое").Set(e.ADSK_Наименование_краткое);
-                                    e.EqupmentDrafting.FI.LookupParameter(Const.Param_CJ_Work).Set(view.Name);
+                                    placedInstance.LookupParameter(Const.Param_NS_ElementId).Set(e.NS_ElementID); //Записываем соответстви ElementId
+                                    placedInstance.LookupParameter(Const.Param_ADSK_Position).Set(e.ADSK_Позиция); //Записываем соответстви ADSK_Позиция
+                                    placedInstance.LookupParameter(Const.Param_ADSK_Group).Set(e.ADSK_Группирование); //Записываем соответстви ADSK_Группирование
+                                    placedInstance.LookupParameter("NS_Имя панели").Set(e.Имя_панели);
+                                    placedInstance.LookupParameter("NS_Текст УГО").Set(e.ADSK_Позиция);
+                                    placedInstance.LookupParameter("ADSK_Наименование краткое").Set(e.ADSK_Наименование_краткое);
+                                    placedInstance.LookupParameter(Const.Param_CJ_Work).Set(view.Name);
 
                                     //Обнуляем второстепенные значения
-                                    e.EqupmentDrafting.FI.LookupParameter(Const.Param_CJ_Begin).Set(" ");
-                                    e.EqupmentDrafting.FI.LookupParameter(Const.Param_CJ_End).Set(" ");
-                                    e.EqupmentDrafting.FI.LookupParameter(Const.Param_CJ_Begin_eq).Set(" ");
-                                    e.EqupmentDrafting.FI.LookupParameter(Const.Param_CJ_End_eq).Set(" ");
-                                    e.EqupmentDrafting.FI.LookupParameter(Const.Param_CJ_Number).Set(" ");
-                                    e.EqupmentDrafting.FI.LookupParameter(Const.Param_CJ_Mark).Set(" ");
-                                    e.EqupmentDrafting.FI.LookupParameter(Const.Param_CJ_Nets).Set(" ");
-                                    e.EqupmentDrafting.FI.LookupParameter(Const.Param_CJ_Lenght).Set((int)1);
+                                    placedInstance.LookupParameter(Const.Param_CJ_Begin).Set(" ");
+                                    placedInstance.LookupParameter(Const.Param_CJ_End).Set(" ");
+                                    placedInstance.LookupParameter(Const.Param_CJ_Begin_eq).Set(" ");
+                                    placedInstance.LookupParameter(Const.Param_CJ_End_eq).Set(" ");
+                                    placedInstance.LookupParameter(Const.Param_CJ_Number).Set(" ");
+                                    placedInstance.LookupParameter(Const.Param_CJ_Mark).Set(" ");
+                                    placedInstance.LookupParameter(Const.Param_CJ_Nets).Set(" ");
+                                    placedInstance.LookupParameter(Const.Param_CJ_Lenght).Set((int)1);
 
 
 
@@ -385,13 +356,13 @@ namespace NGraph.Commands;
                     XYZ P3 = XYZ_end;
                     XYZ P4 = new XYZ(XYZ_end.X, XYZ_begin.Y, 0);
                     if (bools[0])
-                    { Line line1 = Line.CreateBound(P1, P2); DetailCurve dc1 = Document.Create.NewDetailCurve(viewDrafting, line1); dc1.LineStyle = _gstyle; }
+                    { Line line1 = Line.CreateBound(P1, P2); DetailCurve dc1 = Application.ActiveUIDocument.Document.Create.NewDetailCurve(viewDrafting, line1); dc1.LineStyle = _gstyle; }
                     if (bools[1])
-                    { Line line2 = Line.CreateBound(P2, P3); DetailCurve dc2 = Document.Create.NewDetailCurve(viewDrafting, line2); dc2.LineStyle = _gstyle; }
+                    { Line line2 = Line.CreateBound(P2, P3); DetailCurve dc2 = Application.ActiveUIDocument.Document.Create.NewDetailCurve(viewDrafting, line2); dc2.LineStyle = _gstyle; }
                     if (bools[2])
-                    { Line line3 = Line.CreateBound(P3, P4); DetailCurve dc3 = Document.Create.NewDetailCurve(viewDrafting, line3); dc3.LineStyle = _gstyle; }
+                    { Line line3 = Line.CreateBound(P3, P4); DetailCurve dc3 = Application.ActiveUIDocument.Document.Create.NewDetailCurve(viewDrafting, line3); dc3.LineStyle = _gstyle; }
                     if (bools[3])
-                    { Line line4 = Line.CreateBound(P4, P1); DetailCurve dc4 = Document.Create.NewDetailCurve(viewDrafting, line4); dc4.LineStyle = _gstyle; }
+                    { Line line4 = Line.CreateBound(P4, P1); DetailCurve dc4 = Application.ActiveUIDocument.Document.Create.NewDetailCurve(viewDrafting, line4); dc4.LineStyle = _gstyle; }
                 }
 
 
@@ -406,7 +377,7 @@ namespace NGraph.Commands;
                 /// <returns></returns>
                 GraphicsStyle CreateLineStyle(string name, int weight, Autodesk.Revit.DB.Color color, BlockDiagram.TypeOfLine patternLineNAME)
                 {
-                    Categories categories = Document.Settings.Categories;
+                    Categories categories = Application.ActiveUIDocument.Document.Settings.Categories;
                     Category lineCategories = categories.get_Item(BuiltInCategory.OST_Lines);
                     CategoryNameMap lineStyleSubTypes = lineCategories.SubCategories;
 
@@ -420,7 +391,7 @@ namespace NGraph.Commands;
                         cat.LineColor = color;
                         if (patternLineNAME == BlockDiagram.TypeOfLine.Штрих)
                         {
-                            var patternLine = LinePatternElement.GetLinePatternElementByName(Document, patternLineNAME.ToString()).Id;
+                            var patternLine = LinePatternElement.GetLinePatternElementByName(Application.ActiveUIDocument.Document, patternLineNAME.ToString()).Id;
                             cat.SetLinePatternId(patternLine, GraphicsStyleType.Projection);
 
                         }
@@ -451,6 +422,7 @@ namespace NGraph.Commands;
                     foreach (var i in sections) { levels.AddRange(i.Levels); }
                     return levels;
                 }
+
             }
         
        
@@ -472,12 +444,11 @@ namespace NGraph.Commands;
             public FamilySymbol FamilySymbol { get; }
             internal ViewDrafting ViewDrafting { get;}
            // internal XYZ GabaritFamilySymbol { get;}
-            internal FamilyInstance FI { get; set; }
             internal EqupmentDrafting(Autodesk.Revit.DB.Document doc, EqupmentModel model, ViewDrafting VD)
             {
                 EqupmentModel = model;
                 ViewDrafting = VD;
-                FamilySymbol = new FilteredElementCollector(doc).OfClass(typeof(FamilySymbol)).OfCategory(BuiltInCategory.OST_DetailComponents).First(q => q.Name == model.NameSymbol_EqupmentDrafting) as FamilySymbol;
+                FamilySymbol = new FilteredElementCollector(doc).OfClass(typeof(FamilySymbol)).OfCategory(BuiltInCategory.OST_DetailComponents).OfType<FamilySymbol>().First(q => q.Name == model.NameSymbol_EqupmentDrafting);
 
                 double Xmax = FamilySymbol.get_BoundingBox(ViewDrafting).Max.X;
                 double Xmin = FamilySymbol.get_BoundingBox(ViewDrafting).Min.X;
@@ -497,8 +468,14 @@ namespace NGraph.Commands;
         /// </summary>
         class EqupmentModel
         {
-            internal string NameSymbol_EqupmentDrafting { get; set; }
-            internal EqupmentDrafting EqupmentDrafting { get; set; }
+            internal string NameSymbol_EqupmentDrafting { get; set; } = string.Empty;
+            private EqupmentDrafting? drafting;
+            // Геометрия схемы доступна после чтения настроек и выбора семейства.
+            internal EqupmentDrafting EqupmentDrafting
+            {
+                get => drafting ?? throw new InvalidOperationException($"Не подготовлено обозначение для элемента {FI.Id}.");
+                set => drafting = value;
+            }
 
             
             internal string ADSK_Группирование { get; }
@@ -515,13 +492,13 @@ namespace NGraph.Commands;
             {
                 FI = fi;
                 RoomSpace = p;
-                ADSK_Позиция = NgContext._FindParameter(fi,"ADSK_Позиция").AsString();
-                ADSK_Группирование = NgContext._FindParameter(fi,"ADSK_Группирование").AsString();
+                ADSK_Позиция = NgContext._FindParameter(fi, "ADSK_Позиция")?.AsString() ?? string.Empty;
+                ADSK_Группирование = NgContext._FindParameter(fi, "ADSK_Группирование")?.AsString() ?? string.Empty;
                 NS_ElementID = fi.Id.ToString();
-                Имя_панели = NgContext._FindParameter(fi, "Имя панели").AsString();
-                ADSK_Наименование_краткое = NgContext._FindParameter(fi,"ADSK_Наименование краткое").AsString();
+                Имя_панели = NgContext._FindParameter(fi, "Имя панели")?.AsString() ?? string.Empty;
+                ADSK_Наименование_краткое = NgContext._FindParameter(fi, "ADSK_Наименование краткое")?.AsString() ?? string.Empty;
 
-                ПорядковыйНомер = NgContext._FindParameter(fi,"Марка").AsString();
+                ПорядковыйНомер = NgContext._FindParameter(fi, "Марка")?.AsString() ?? string.Empty;
 
             }
 
@@ -582,22 +559,14 @@ namespace NGraph.Commands;
             internal LevelOfSection Level { get; }
             internal string Number { get; }
             internal string Name { get; }
-            internal Space Space { get; }
+            internal Space? Space { get; }
 
-            public RoomSpace(LevelOfSection e, Space space)
+            public RoomSpace(LevelOfSection e, Space? space)
             {
                 Space = space;
                 Level = e;
-                try
-                {
-                    Number = NgContext._FindParameter(space, BuiltInParameter.ROOM_NUMBER).AsString();
-                }
-                catch { Number = "не назначен номер"; }
-                try
-                {
-                    Name = NgContext._FindParameter(space,BuiltInParameter.ROOM_NAME).AsString();
-                }
-                catch { Name = "не назначено имя"; }
+                Number = space?.get_Parameter(BuiltInParameter.ROOM_NUMBER)?.AsString() ?? "не назначен номер";
+                Name = space?.get_Parameter(BuiltInParameter.ROOM_NAME)?.AsString() ?? "Без пространства";
                 
 
             }
@@ -617,8 +586,8 @@ namespace NGraph.Commands;
             public LevelOfSection(Section k, Level level)
 
             {
-                Name = NgContext._FindParameter(level,BuiltInParameter.DATUM_TEXT).AsString();
-                Elevation = (int)NgContext._FindParameter(level,BuiltInParameter.LEVEL_ELEV).AsDouble().ToMillimeters();
+                Name = level.Name;
+                Elevation = (int)level.Elevation.ToMillimeters();
                 Section = k;
             }
         }

@@ -14,7 +14,7 @@ public class SelectInModelByElementId : ExternalCommand
         List<Element> elements;
         try
         {
-            elements = Helpers.SelectElementsId(BuiltInCategory.OST_DetailComponents, UiDocument);
+            elements = Helpers.SelectElementsId(BuiltInCategory.OST_DetailComponents, Application.ActiveUIDocument);
         }
         catch (Autodesk.Revit.Exceptions.OperationCanceledException)
         {
@@ -36,7 +36,7 @@ public class SelectInModelByElementId : ExternalCommand
             if (value > int.MaxValue) continue;
             var id = new ElementId((int)value);
 #endif
-            if (Document.GetElement(id) is not null)
+            if (Application.ActiveUIDocument.Document.GetElement(id) is not null)
             {
                 elementIds.Add(id);
             }
@@ -48,7 +48,7 @@ public class SelectInModelByElementId : ExternalCommand
             return;
         }
 
-        UiDocument.Selection.SetElementIds(elementIds);
-        UiDocument.ShowElements(elementIds);
+        Application.ActiveUIDocument.Selection.SetElementIds(elementIds);
+        Application.ActiveUIDocument.ShowElements(elementIds);
     }
 }

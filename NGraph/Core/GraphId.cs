@@ -1,4 +1,4 @@
-﻿using Autodesk.Revit.DB.Mechanical;
+using Autodesk.Revit.DB.Mechanical;
 using Autodesk.Revit.DB;
 
 
@@ -20,7 +20,7 @@ namespace NGraph.Core
         /// <summary>
         /// Revit for DuctSystems (fore project has more than one duct system)
         /// </summary>
-        static public MEPSystem MEPSystem { get; private set; }
+        public static MEPSystem? MEPSystem { get; private set; }
         /// <summary>
         /// Construction graph
         /// </summary>
@@ -28,7 +28,7 @@ namespace NGraph.Core
         {
             Vertices = new List<VertexId>();
         }
-        public Dictionary<int, GraphId> SubGraph { get; set; }
+        public Dictionary<int, GraphId> SubGraph { get; set; } = new();
 
 
 
@@ -360,7 +360,7 @@ namespace NGraph.Core
         /// <param name="graph">Graph</param>
         /// <param name="elementId">ElementID by Revit</param>
         /// <returns></returns>
-        static public VertexId GetVertexId(GraphId graph, ElementId elementId)
+        static public VertexId? GetVertexId(GraphId graph, ElementId elementId)
         {
             List<VertexId> list = new List<VertexId>();
             for (int i = 0; i < graph.Vertices.Count; i++)
@@ -543,7 +543,7 @@ namespace NGraph.Core
     /// </summary>
     public class VertexId
     {
-        public ElementId Name { get; set; }
+        public ElementId Name { get; set; } = ElementId.InvalidElementId;
         public List<EdgeId> Edges { get; }
 
         public List<Object> Objects { get; set; } = [];
@@ -552,11 +552,12 @@ namespace NGraph.Core
         /// OST_MechanicalEquipment,
         /// OST_ElectricalEquipment
         /// </summary>
-        public EQ eQ { get; }
+        public EQ? eQ { get; }
 
         public VertexId(ElementId name, FamilyInstance fi)
         {
             Name = name;
+            Xyz = fi.GetPlacementPoint();
             Edges = new List<EdgeId>();
 
 
@@ -620,7 +621,7 @@ namespace NGraph.Core
     /// </summary>
     public class EdgeId
     {
-        public List<Duct> Duct { get; }
+        public List<Duct> Duct { get; } = new();
         public VertexId From { get; }
         public VertexId To { get; }
         //public List<Cabel> ListOfCabel { get; set; } = new List<Cabel>();//  список кабеля для него
@@ -638,20 +639,22 @@ namespace NGraph.Core
         }
 
 
-        public Curve Curve { get; }
-        public Element ElementOfCurve { get; }
+        public Curve? Curve { get; }
+        public Element? ElementOfCurve { get; }
         public EdgeId(VertexId from, VertexId to,  Element el)
         {
             ElementOfCurve = el;
             From = from;
             To = to;
-            Curve = (el.Location as LocationCurve).Curve;
+            Curve = el is CurveElement curveElement ? curveElement.GeometryCurve
+                : el.Location is LocationCurve location ? location.Curve
+                : throw new ArgumentException($"У элемента {el.Id} нет кривой.", nameof(el));
             Length_mm = ((int)(Curve.Length).ToMillimeters());
         }
 
 
 
-        public VirtualCurve VirtualCurve { get; }
+        public VirtualCurve? VirtualCurve { get; }
         public EdgeId(VertexId from, VertexId to, VirtualCurve curve)
         {
             From = from;
@@ -742,7 +745,7 @@ namespace NGraph.Core
     public class Cabel
     {
         public WayId WayId { get; }
-        public string Namber { get; set; } //Номер кабеля
+        public string Namber { get; set; } = string.Empty; //Номер кабеля
         /// <summary>
         /// Округленная длина до 5 в метрах
         /// </summary>
@@ -823,7 +826,8 @@ namespace NGraph.Core
             double sumLenght = 0;
             foreach (var item in duct)
             {
-                var el = item.Location as LocationCurve;
+                if (item.Location is not LocationCurve el)
+                    continue;
 
                 var lenght = Math.Round((double)el.Curve.Length, 1);
                 sumLenght += lenght;
@@ -878,12 +882,12 @@ namespace NGraph.Core
     /// </summary>
     public class CabelJournal
     {
-        public string Namber { get; set; } //Номер кабеля
-        public string Begin { get; set; }
-        public string End { get; set; }
+        public string Namber { get; set; } = string.Empty; //Номер кабеля
+        public string Begin { get; set; } = string.Empty;
+        public string End { get; set; } = string.Empty;
         public Dictionary<string, int> Carries { get; set; } = new Dictionary<string, int>();
 
-        public string CarriesString { get; set; }
+        public string CarriesString { get; set; } = string.Empty;
 
         /*
         public int В_лотке { get; set; }
@@ -891,12 +895,12 @@ namespace NGraph.Core
         public int В_стояке { get; set; }
         */
         public int Сечение { get; set; } //мм кв.
-        public string Наименование_краткое { get; set; }
-        public string NxMxS { get; set; }
-        public string Наименование_полное { get; set; }
-        public string Производитель { get; set; }
-        public string Марка { get; set; }
-        public string Артикул { get; set; }
+        public string Наименование_краткое { get; set; } = string.Empty;
+        public string NxMxS { get; set; } = string.Empty;
+        public string Наименование_полное { get; set; } = string.Empty;
+        public string Производитель { get; set; } = string.Empty;
+        public string Марка { get; set; } = string.Empty;
+        public string Артикул { get; set; } = string.Empty;
         public TypeGroupCabel Type { get; set; } = TypeGroupCabel.Слаботочный;
 
 
@@ -905,6 +909,5 @@ namespace NGraph.Core
     }
 
 }
-
 
 

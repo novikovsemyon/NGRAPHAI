@@ -1,4 +1,4 @@
-﻿namespace NGraph.Core.FunctionalScheme;
+namespace NGraph.Core.FunctionalScheme;
 
 /// <summary>
 /// Элемент структурной схемы, по которому строится Footor
@@ -6,7 +6,7 @@
 public class FSAheader: FSAentity, IComparable<FSAheader>
 {
     public int  index { get; set; }
-    public ElementHeader  ElementHeader { get; set; }
+    public ElementHeader? ElementHeader { get; set; }
     /// <summary>
     /// Пересекающиеся точки включая исходную или другой элемент узла представляющий прибор
     /// </summary>
@@ -23,15 +23,15 @@ public class FSAheader: FSAentity, IComparable<FSAheader>
     /// Порядковый номер
     /// </summary>
     public Parameter Parameter_position_number { get; }
-    public string Parameter_position_number_set { get; set; }
+    public string Parameter_position_number_set { get; set; } = string.Empty;
 
     /// <summary>
     /// Номер элемента с позицией
     /// </summary>
     public Parameter Parameter_name_element { get; }
-    public string Parameter_name_element_set { get; set; }
+    public string Parameter_name_element_set { get; set; } = string.Empty;
 
-    public Group GroupRevit { get; set; }
+    public Group? GroupRevit { get; set; }
     
     public CableLog CableLog { get; }
                 
@@ -58,7 +58,7 @@ public class FSAheader: FSAentity, IComparable<FSAheader>
 
     public int CompareTo(FSAheader? obj)
     {
-        return int.Parse(Parameter_position_number.AsString()) - int.Parse(obj.Parameter_position_number.AsString());
+        return obj is null ? 1 : int.Parse(Parameter_position_number.AsString()).CompareTo(int.Parse(obj.Parameter_position_number.AsString()));
 
     }
 }

@@ -1,4 +1,4 @@
-﻿using Autodesk.Revit.Attributes;
+using Autodesk.Revit.Attributes;
 using Autodesk.Revit.UI;
 using NGraph.Core;
 using Nice3point.Revit.Toolkit.External;
@@ -23,14 +23,14 @@ public class FindHidenElements : ExternalCommand
         
         
         
-        var hiddenElements= new FilteredElementCollector(Document)
+        var hiddenElements= new FilteredElementCollector(Application.ActiveUIDocument.Document)
             .OfClass(typeof(FamilyInstance)).WhereElementIsNotElementType()
-            .Where(x =>x.IsHidden(ActiveView)).
+            .Where(x =>x.IsHidden(Application.ActiveUIDocument.ActiveView)).
             Select(x => x).ToList();
 			
        
         
-        var elements = Document.GetElements(ActiveView?.Id);
+        var elements = Application.ActiveUIDocument.Document.CollectElements(Application.ActiveUIDocument.ActiveView.Id);
 
         //Элементы из бызы отфильтрованные по нужным категориям
         var filteredElements = elements
@@ -38,7 +38,7 @@ public class FindHidenElements : ExternalCommand
                      //   || (x.GetType() == typeof(Group) &&  x.Location != null) //Принадлежит группе и эта группа не входит в другую
                      //   || x.GetType() == typeof(DetailLine)
                        // || x.GetType() == typeof(TextNote)
-                        & x.IsHidden(ActiveView) //Все скрытые элементы
+                        & x.IsHidden(Application.ActiveUIDocument.ActiveView) //Все скрытые элементы
             );
         filteredElements.Count();
 

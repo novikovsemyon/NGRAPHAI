@@ -1,4 +1,4 @@
-﻿using Autodesk.Revit.Attributes;
+using Autodesk.Revit.Attributes;
 using Nice3point.Revit.Toolkit.External;
 using NGraph.ViewModels;
 using NGraph.Views;
@@ -25,7 +25,7 @@ public class CreateViewSheetsByDraftingViewes : ExternalCommand
 
             // 1. Выбираем чертежные виды
 
-            ICollection<ElementId> selectedElementId = UiDocument.Selection.GetElementIds();
+            ICollection<ElementId> selectedElementId = Application.ActiveUIDocument.Selection.GetElementIds();
 
 
             int int_pageNumberSheet = 1;
@@ -38,26 +38,26 @@ public class CreateViewSheetsByDraftingViewes : ExternalCommand
 
                 Helpers helpers = new Helpers();
 
-                Element element = Document.GetElement(e);
+                if (Application.ActiveUIDocument.Document.GetElement(e) is not ViewDrafting element) continue;
 
 
-                var fi_es = new FilteredElementCollector(Document, e)
+                var fi_es = new FilteredElementCollector(Application.ActiveUIDocument.Document, e)
                     .OfClass(typeof(FamilyInstance))
                 //    .OfType<AnnotationSymbolType>(
-                    .Where(i => i.GetType() == typeof(AnnotationSymbol) && (i as FamilyInstance).Symbol.FamilyName == "CISP_УГО_Список");
+                    .OfType<AnnotationSymbol>().Where(i => i.Symbol.FamilyName == "CISP_УГО_Список");
                 //.OfCategory(BuiltInCategory.OST_TitleBlocks); Листы
 
                 string nameViewSheets = "";
 
                 foreach (var fi in fi_es)
                 {
-                    var nameFAS = NgContext._FindParameter((fi as AnnotationSymbol),"FAS_Установка").AsString();
+                    var nameFAS = NgContext._FindParameter(fi, "FAS_Установка")?.AsString() ?? string.Empty;
                     nameViewSheets = nameViewSheets + nameFAS + ", ";
 
 
                 }
 
-                string cutNameViewSheets = nameViewSheets.Remove(nameViewSheets.Length - 2);
+                string cutNameViewSheets = nameViewSheets.Length > 1 ? nameViewSheets.Remove(nameViewSheets.Length - 2) : element.Name;
                 string adj = "";
                 if (fi_es.Count() == 1) { adj = "а "; } else { adj = "и "; }
                 var newNameViewSheets = "";
@@ -76,9 +76,9 @@ public class CreateViewSheetsByDraftingViewes : ExternalCommand
 
 
 
-                //(element as ViewDrafting).get_BoundingBox
+                //(element).get_BoundingBox
 
-                var collector = new FilteredElementCollector(Document);
+                var collector = new FilteredElementCollector(Application.ActiveUIDocument.Document);
                     string date = "12.25";
                     string Разработал = "Мигонькина";
                     string Проверил = "Новиков";
@@ -86,7 +86,7 @@ public class CreateViewSheetsByDraftingViewes : ExternalCommand
                     string НормоКнотр = "Ерошкин";
                     string ГИП = "Коренной";
                     string[] family = [Разработал, Проверил, ГлСпец, НормоКнотр, ГИП];
-                    Element[] elFamily = [
+                    Element?[] elFamily = [
                                  collector.OfCategory(BuiltInCategory.OST_GenericAnnotation).WhereElementIsElementType().ToElements()
                              .Where(i => i.Name == Разработал).FirstOrDefault(),
                              collector.OfCategory(BuiltInCategory.OST_GenericAnnotation).WhereElementIsElementType().ToElements()
@@ -114,7 +114,7 @@ public class CreateViewSheetsByDraftingViewes : ExternalCommand
                     string pageNumberSheet = prefix + int_pageNumberSheet.ToString();
                     int_pageNumberSheet++;
 
-                    CreateSheetView(Document, element as ViewDrafting, newNameViewSheets, elFamily, date, pageNumberSheet, Номер_проекта);
+                    CreateSheetView(Application.ActiveUIDocument.Document, element, newNameViewSheets, elFamily, date, pageNumberSheet, Номер_проекта);
 
 
 
@@ -236,7 +236,7 @@ public class CreateViewSheetsByDraftingViewes : ExternalCommand
         /// <param name="viewDrafting"></param>
         /// <param name="newNameViewSheets"></param>
         /// <param name="elFamily"></param>
-        private void CreateSheetView(Autodesk.Revit.DB.Document document, ViewDrafting viewDrafting, string newNameViewSheets , Element[] elFamily, string date, string pageNumberSheet, string Номер_проекта)
+        private void CreateSheetView(Autodesk.Revit.DB.Document document, ViewDrafting viewDrafting, string newNameViewSheets , Element?[] elFamily, string date, string pageNumberSheet, string Номер_проекта)
         {
 
            
@@ -244,7 +244,7 @@ public class CreateViewSheetsByDraftingViewes : ExternalCommand
             collector.OfClass(typeof(FamilySymbol));
             collector.OfCategory(BuiltInCategory.OST_TitleBlocks);
 
-            FamilySymbol fs = collector.Where(i=>((i as FamilySymbol).FamilyName == "00_ОсновнаяНадписьФорма3_ГОСТ21-1101-2013") && (i as FamilySymbol).Name =="Форма 3").FirstOrDefault() as FamilySymbol;
+            FamilySymbol? fs = collector.OfType<FamilySymbol>().FirstOrDefault(i => i.FamilyName == "00_ОсновнаяНадписьФорма3_ГОСТ21-1101-2013" && i.Name == "Форма 3");
             if (fs != null)
             {
                 using (Transaction t = new Transaction(document, "Create a new ViewSheet"))
@@ -259,9 +259,10 @@ public class CreateViewSheetsByDraftingViewes : ExternalCommand
                             throw new Exception("Failed to create new ViewSheet.");
                         }
 
-                        var fi_es = new FilteredElementCollector(Document, viewSheet.Id)
+                        var fi_es = new FilteredElementCollector(Application.ActiveUIDocument.Document, viewSheet.Id)
                     .OfClass(typeof(FamilyInstance))
-                    .OfCategory(BuiltInCategory.OST_TitleBlocks).FirstOrDefault();
+                    .OfCategory(BuiltInCategory.OST_TitleBlocks).FirstOrDefault()
+                             ?? throw new InvalidOperationException("На созданном листе отсутствует основная надпись.");
 
                         Helpers helpers = new Helpers();
 
@@ -361,8 +362,8 @@ public class CreateViewSheetsByDraftingViewes : ExternalCommand
 
 
                         }
-                        NgContext._FindParameter(fi_es,"Формат А").Set(paperSize);
-                        NgContext._FindParameter(fi_es,"Множитель").Set(PageOrientation);
+                        NgContext.RequireParameter(fi_es,"Формат А").Set(paperSize);
+                        NgContext.RequireParameter(fi_es,"Множитель").Set(PageOrientation);
 
                         //Лист определили, теперь определим координату куда ставить чертежный вид на лист. Координата зависит от  PageOrientation и paperSize (по уму надо бы класс создать с этими значениями, который в к конструкторе это вычисляет)
                         //метод определения координат середины полезной области листа.
@@ -376,20 +377,25 @@ public class CreateViewSheetsByDraftingViewes : ExternalCommand
                         
 
 
-                        NgContext._FindParameter(viewSheet,"ADSK_Штамп Строка 1 фамилия").Set("Мигонькина");
-                        NgContext._FindParameter(viewSheet,"ADSK_Штамп Строка 2 фамилия").Set("Новиков");
-                        NgContext._FindParameter(viewSheet,"ADSK_Штамп Раздел проекта").Set(Номер_проекта);
-                        NgContext._FindParameter(viewSheet,BuiltInParameter.SHEET_NAME).Set(newNameViewSheets);
-                        NgContext._FindParameter(viewSheet,BuiltInParameter.SHEET_NUMBER).Set(pageNumberSheet);
-                        NgContext._FindParameter(viewSheet,BuiltInParameter.SHEET_ISSUE_DATE).Set(date);
+                        NgContext.RequireParameter(viewSheet,"ADSK_Штамп Строка 1 фамилия").Set("Мигонькина");
+                        NgContext.RequireParameter(viewSheet,"ADSK_Штамп Строка 2 фамилия").Set("Новиков");
+                        NgContext.RequireParameter(viewSheet,"ADSK_Штамп Раздел проекта").Set(Номер_проекта);
+                        NgContext.RequireParameter(viewSheet,BuiltInParameter.SHEET_NAME).Set(newNameViewSheets);
+                        NgContext.RequireParameter(viewSheet,BuiltInParameter.SHEET_NUMBER).Set(pageNumberSheet);
+                        NgContext.RequireParameter(viewSheet,BuiltInParameter.SHEET_ISSUE_DATE).Set(date);
 
                         //ElementId elid = new ElementId(894848); //Новиков
-                        NgContext._FindParameter(fi_es,"Штамп.Подпись1").Set(elFamily[0].Id);
-                        NgContext._FindParameter(fi_es,"Штамп.Подпись2").Set(elFamily[1].Id);
-                        NgContext._FindParameter(fi_es,"Штамп.Подпись3").Set(elFamily[2].Id);
+                        if (elFamily[0] is Element signature0)
+                            NgContext.RequireParameter(fi_es,"Штамп.Подпись1").Set(signature0.Id);
+                        if (elFamily[1] is Element signature1)
+                            NgContext.RequireParameter(fi_es,"Штамп.Подпись2").Set(signature1.Id);
+                        if (elFamily[2] is Element signature2)
+                            NgContext.RequireParameter(fi_es,"Штамп.Подпись3").Set(signature2.Id);
                        // fi_es.FindParameter("Штамп.Подпись4").Set(elFamily[---].Id);
-                       NgContext._FindParameter(fi_es,"Штамп.Подпись5").Set(elFamily[3].Id);
-                       NgContext._FindParameter(fi_es,"Штамп.Подпись6").Set(elFamily[4].Id);
+                       if (elFamily[3] is Element signature3)
+                           NgContext.RequireParameter(fi_es,"Штамп.Подпись5").Set(signature3.Id);
+                       if (elFamily[4] is Element signature4)
+                           NgContext.RequireParameter(fi_es,"Штамп.Подпись6").Set(signature4.Id);
 
 
 

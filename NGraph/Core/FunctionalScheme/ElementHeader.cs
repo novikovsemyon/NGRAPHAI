@@ -1,4 +1,4 @@
-﻿
+
 namespace NGraph.Core.FunctionalScheme;
 
 /// <summary>
@@ -7,12 +7,8 @@ namespace NGraph.Core.FunctionalScheme;
 public class ElementHeader: IComparable<ElementHeader>
 {
     public int  index { get; set; }
-    public string Param_NS_GOST { get; }
-    public string Param_NS_Equpment { get; }
-    /// <summary>
-    /// Список пересекающихся точек
-    /// </summary>
-    public Parameter Parameter_position_number { get; }
+    public string Param_NS_GOST { get; } = string.Empty;
+    public string Param_NS_Equpment { get; } = string.Empty;
     /// <summary>
     /// Список пересекающихся точек
     /// </summary>
@@ -25,7 +21,7 @@ public class ElementHeader: IComparable<ElementHeader>
 
 
     
-    public FamilyInstance FamilyInstance { get; }
+    public FamilyInstance? FamilyInstance { get; }
 
     
 
@@ -36,14 +32,14 @@ public class ElementHeader: IComparable<ElementHeader>
     public ElementHeader(FamilyInstance familyInstance, View v, List<FSAheader> FSAheaders)
     {
         FamilyInstance = familyInstance;
+        Param_NS_GOST = familyInstance.LookupParameter(Const.Param_NS_GOST)?.AsString() ?? string.Empty;
+        Param_NS_Equpment = familyInstance.LookupParameter(Const.Param_NS_Equpment)?.AsString() ?? string.Empty;
         foreach (var fh in FSAheaders)
         {
             if (IsCrossingElement_withHimself(familyInstance, fh.FI, v))
             {
                 fSAheadersEQ.Add(fh);
                 fh.ElementHeader = this;
-                Param_NS_GOST = familyInstance.LookupParameter(Const.Param_NS_GOST).AsString();
-                Param_NS_Equpment = familyInstance.LookupParameter(Const.Param_NS_Equpment).AsString();
 
             }
             
@@ -81,7 +77,7 @@ public class ElementHeader: IComparable<ElementHeader>
     */
     public int CompareTo(ElementHeader? obj)
     {
-        return int.Parse(Parameter_position_number.AsString()) - int.Parse(obj.Parameter_position_number.AsString());
+        return obj is null ? 1 : index.CompareTo(obj.index);
 
     }
 

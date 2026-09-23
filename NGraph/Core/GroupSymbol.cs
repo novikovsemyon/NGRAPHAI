@@ -1,4 +1,4 @@
-﻿namespace NGraph.Core;
+namespace NGraph.Core;
 
   /// <summary>
   /// Группа символа
@@ -7,8 +7,7 @@
   {
       public Symbol_ID Symbol_ID { get;}
       public Marka_ID Marka_ID { get;}
-      public string НомерКабеля { get; set;}
-      public Cabel Cabel_ID { get;}
+      public string НомерКабеля { get; set;} = string.Empty;
       public int indexGroupSymbol {get;}
 
 

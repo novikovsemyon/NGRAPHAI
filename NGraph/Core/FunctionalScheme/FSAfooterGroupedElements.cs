@@ -1,4 +1,4 @@
-﻿namespace NGraph.Core.FunctionalScheme;
+namespace NGraph.Core.FunctionalScheme;
 
  /// <summary>
  /// Сгруппированные элементы футора по структуре
@@ -59,7 +59,7 @@
                      (xyz+ new XYZ(0, 152 / 304.8, 0),
                      new FilteredElementCollector(doc).OfClass(typeof(FamilySymbol)).First(q => q.Name == Const.Element_CabelForFootor) as FamilySymbol, viewDrafting);
 
-                 FamilyInstance fiHeader = (doc.GetElement(Header.ID) as FamilyInstance);
+                 FamilyInstance fiHeader = Header.FI;
                  fiMark.LookupParameter(Const.Param_CJ_Number).Set(fiHeader.LookupParameter(dd.NameParamHeader).AsString());
                  //fiMark.LookupParameter(Const.Param_CJ_Number).Set(fiHeader.LookupParameter(dd.NameParamHeader).AsString() + "-" + Footer.Group);
 

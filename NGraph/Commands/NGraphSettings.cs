@@ -13,7 +13,7 @@ public class NGraphSettings : ExternalCommand
 {
     public override void Execute()
     {
-        var view = new NGraphSettingsView(new NGraphSettingsViewModel { Doc = Document });
+        var view = new NGraphSettingsView(new NGraphSettingsViewModel(Application.ActiveUIDocument.Document));
         new WindowInteropHelper(view).Owner = Application.MainWindowHandle;
         view.ShowDialog();
     }

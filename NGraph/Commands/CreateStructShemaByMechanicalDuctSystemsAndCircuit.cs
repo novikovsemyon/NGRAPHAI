@@ -1,4 +1,4 @@
-﻿using Autodesk.Revit.Attributes;
+using Autodesk.Revit.Attributes;
 using Autodesk.Revit.DB.Mechanical;
 using Autodesk.Revit.UI;
 using NGraph.Core;
@@ -17,22 +17,27 @@ public class CreateStructShemaByMechanicalDuctSystemsAndCircuit : ExternalComman
     public override void Execute()
     {
        
-        var element = Helpers.SelectElementId(BuiltInCategory.OST_DuctCurves, UiDocument, Document);
+        var element = Helpers.SelectElementId(BuiltInCategory.OST_DuctCurves, Application.ActiveUIDocument, Application.ActiveUIDocument.Document);
 
 
-        CreateBlockDiagram(Document, element.Id, element);
+        CreateBlockDiagram(Application.ActiveUIDocument.Document, element.Id, element);
 
     }
     
     
         void CreateBlockDiagram(Document _doc, ElementId elementId, Element element)
         {
+            if (element is not Duct duct || duct.MEPSystem is not MechanicalSystem system)
+            {
+                TaskDialog.Show("NGraph", "Выберите воздуховод, принадлежащий механической системе.");
+                return;
+            }
             Helpers helpers = new Helpers();
 
 
             #region //=========== 1 =========== grahp
             GraphId gr = new GraphId();
-            GraphId graph = gr.GraphIdFromSystem((element as Duct).MEPSystem , Document);
+            GraphId graph = gr.GraphIdFromSystem(system , Application.ActiveUIDocument.Document);
             #endregion
 
 
@@ -125,7 +130,8 @@ public class CreateStructShemaByMechanicalDuctSystemsAndCircuit : ExternalComman
                     ///Переделать!!!!!!!!!!!!
                     foreach (var eq in circuitId.VerticesFromBaseEquipment)
                     {
-                        listEQ.Add(eq.eQ);
+                        if (eq.eQ is EQ equipment)
+                            listEQ.Add(equipment);
                     }
                     circuitId.EQFromBaseEquipment = listEQ;
                     ///переделать !!!!!!!!!!!!! 
@@ -159,7 +165,7 @@ public class CreateStructShemaByMechanicalDuctSystemsAndCircuit : ExternalComman
 
 
 
-            ViewDrafting view = helpers.CreateViewDrafting(Document, "Структурная схема", true, UiDocument);
+            ViewDrafting view = helpers.CreateViewDrafting(Application.ActiveUIDocument.Document, "Структурная схема", true, Application.ActiveUIDocument);
 
             //Расстановка структуры по уровням
             /*
@@ -416,7 +422,7 @@ public class CreateStructShemaByMechanicalDuctSystemsAndCircuit : ExternalComman
                 tr.Start();
                 try
                 {
-                    foreach (var item in GraphId.DuctFromMS((element as Duct).MEPSystem))
+                    foreach (var item in GraphId.DuctFromMS(system))
                     {
                         item.LookupParameter("Комментарии").Set("");
                         item.LookupParameter("NS_Сечение_мм.кв.").Set(0);

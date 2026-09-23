@@ -17,8 +17,8 @@ public class NumberingView : ExternalCommand
 {
     public override void Execute()
     {
-        var sheets = UiDocument.Selection.GetElementIds()
-            .Select(Document.GetElement)
+        var sheets = Application.ActiveUIDocument.Selection.GetElementIds()
+            .Select(Application.ActiveUIDocument.Document.GetElement)
             .OfType<ViewSheet>()
             .OrderBy(sheet => sheet.SheetNumber, new NaturalStringComparer())
             .ToList();
@@ -28,9 +28,8 @@ public class NumberingView : ExternalCommand
             return;
         }
 
-        var viewModel = new NGraphNumberingSheetsViewModel
+        var viewModel = new NGraphNumberingSheetsViewModel(Application.ActiveUIDocument.Document)
         {
-            Doc = Document,
             Sheets = sheets
         };
 
@@ -58,7 +57,7 @@ public class NumberingView : ExternalCommand
 
         var pageNumberSheet = 1;
 
-        using var transaction = new Transaction(Document, "NGraph: нумерация листов");
+        using var transaction = new Transaction(Application.ActiveUIDocument.Document, "NGraph: нумерация листов");
         transaction.Start();
 
         try

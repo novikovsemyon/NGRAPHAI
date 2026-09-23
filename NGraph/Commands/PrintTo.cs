@@ -1,4 +1,4 @@
-﻿using Autodesk.Revit.Attributes;
+using Autodesk.Revit.Attributes;
 using Nice3point.Revit.Toolkit.External;
 using NGraph.ViewModels;
 using NGraph.Views;
@@ -25,8 +25,8 @@ public class PrintTo : ExternalCommand
 
          //using (StreamWriter writer = new StreamWriter(@"D:\Documents\Кабельный журнал.txt")) { }
 
-         var version = Document.Application.VersionName.Remove(0,15);
-         var titele = Document.Title;
+         var version = Application.ActiveUIDocument.Document.Application.VersionName.Remove(0,15);
+         var titele = Application.ActiveUIDocument.Document.Title;
          var date = DateTime.Today.ToShortDateString() +"_"+ DateTime.Now.Hour.ToString() + "." + DateTime.Now.Minute.ToString();
 
          //.SaveAs(@$"{mydocumentsPath}\{titele}_{date}_каб.журн.xlsx");
@@ -36,9 +36,9 @@ public class PrintTo : ExternalCommand
          Directory.CreateDirectory(directiryPDF);
          Directory.CreateDirectory(directiryDWG);
 
-         ICollection<ElementId> selectedEl = UiDocument.Selection.GetElementIds();
+         ICollection<ElementId> selectedEl = Application.ActiveUIDocument.Selection.GetElementIds();
 
-         using (Transaction tr = new Transaction(Document, "Печать"))
+         using (Transaction tr = new Transaction(Application.ActiveUIDocument.Document, "Печать"))
          {
              tr.Start("Печать");
              
@@ -72,10 +72,10 @@ public class PrintTo : ExternalCommand
 
              Helpers helpers = new Helpers();
 
-             if (Document.GetElement(e) is not ViewSheet sheet)
+             if (Application.ActiveUIDocument.Document.GetElement(e) is not ViewSheet sheet)
                  continue;
 
-             var titleBlocks = new FilteredElementCollector(Document, e)
+             var titleBlocks = new FilteredElementCollector(Application.ActiveUIDocument.Document, e)
                  .OfClass(typeof(FamilyInstance))
                  .OfCategory(BuiltInCategory.OST_TitleBlocks)
                  .OfType<FamilyInstance>()
@@ -130,7 +130,7 @@ public class PrintTo : ExternalCommand
                      double heightValue = Math.Round(helpers.FeetToMillimeters((max.Y - min.Y) * Math.Sign(max.Y - min.Y)));
 
 
-                     PrintManager printmgr = Document.PrintManager;
+                     PrintManager printmgr = Application.ActiveUIDocument.Document.PrintManager;
 
 
                      printmgr.PrintSetup.CurrentPrintSetting = printmgr.PrintSetup.InSession;
@@ -152,7 +152,7 @@ public class PrintTo : ExternalCommand
 
                      //catch { TaskDialog.Show("Ошибка", "Установите принтер Microsoft Print to PDF https://www.biopdf.com/download.php"); }
 
-                     FilteredElementCollector col = new FilteredElementCollector(Document).OfClass(typeof(PrintSetting));
+                     FilteredElementCollector col = new FilteredElementCollector(Application.ActiveUIDocument.Document).OfClass(typeof(PrintSetting));
 
                      PrintSetting? set = null;
 
@@ -193,8 +193,13 @@ public class PrintTo : ExternalCommand
                      //Если надо сместить вправо А3 от 0,0,0 то надо задать UserDefinedMarginX = -;
 
 
+                     #if REVIT2022_OR_GREATER
+                     printmgr.PrintSetup.CurrentPrintSetting.PrintParameters.OriginOffsetX = deltaToRight;
+                     printmgr.PrintSetup.CurrentPrintSetting.PrintParameters.OriginOffsetY = deltaToUp;
+#else
                      printmgr.PrintSetup.CurrentPrintSetting.PrintParameters.UserDefinedMarginX = deltaToRight;
                      printmgr.PrintSetup.CurrentPrintSetting.PrintParameters.UserDefinedMarginY = deltaToUp;
+#endif
 
 
 
@@ -435,8 +440,13 @@ public class PrintTo : ExternalCommand
                      //Если надо сместить вправо А3 от 0,0,0 то надо задать UserDefinedMarginX = -;
 
 
+                     #if REVIT2022_OR_GREATER
+                     printmgr.PrintSetup.CurrentPrintSetting.PrintParameters.OriginOffsetX = deltaToRight;
+                     printmgr.PrintSetup.CurrentPrintSetting.PrintParameters.OriginOffsetY = deltaToUp;
+#else
                      printmgr.PrintSetup.CurrentPrintSetting.PrintParameters.UserDefinedMarginX = deltaToRight;
                      printmgr.PrintSetup.CurrentPrintSetting.PrintParameters.UserDefinedMarginY = deltaToUp;
+#endif
 
 
 
@@ -540,11 +550,11 @@ public class PrintTo : ExternalCommand
          int iteratorDWG = 0;
          foreach (ElementId e in selectedEl)
          {
-             if (Document.GetElement(e) is not ViewSheet sheet)
+             if (Application.ActiveUIDocument.Document.GetElement(e) is not ViewSheet sheet)
                  continue;
 
              DWGExportOptions dwgOption = new DWGExportOptions();
-             ExportDWGSettings dWGSettings = ExportDWGSettings.Create(Document, "export");
+             ExportDWGSettings dWGSettings = ExportDWGSettings.Create(Application.ActiveUIDocument.Document, "export");
              try
              {
                  dwgOption = dWGSettings.GetDWGExportOptions();
@@ -564,12 +574,12 @@ public class PrintTo : ExternalCommand
                      exportName = baseName + "_" + iteratorDWG;
                  }
 
-                 Document.Export(directiryDWG, exportName, sheetIds, dwgOption);
+                 Application.ActiveUIDocument.Document.Export(directiryDWG, exportName, sheetIds, dwgOption);
                  iteratorDWG = 0;
              }
              finally
              {
-                 Document.Delete(dWGSettings.Id);
+                 Application.ActiveUIDocument.Document.Delete(dWGSettings.Id);
              }
          }
      }

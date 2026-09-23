@@ -10,7 +10,7 @@ namespace NGraph.Views;
 
 public sealed partial class NGraphCreateSxemaByModelView
 {
-        public Object Cancel { get; set; }
+        public bool Cancel { get; set; } = true;
         IList<Element> Elements { get; set; } 
         public int Selector { get; set; } = 0;
         public NGraphCreateSxemaByModelView(NGraphCreateSxemaByModelViewModel viewModel)
@@ -30,10 +30,10 @@ public sealed partial class NGraphCreateSxemaByModelView
             List<Parameter> parameters = new List<Parameter>();
             List<Parameter> parametersOfType = new List<Parameter>();
 
-            foreach (var e in Elements)
+            foreach (var e in Elements.OfType<FamilyInstance>())
             {
                 GetParemeterList_Instance_And_Type(e.ParametersMap, ref parameters);
-                GetParemeterList_Instance_And_Type((e as FamilyInstance).Symbol.ParametersMap, ref parametersOfType);
+                GetParemeterList_Instance_And_Type(e.Symbol.ParametersMap, ref parametersOfType);
 
 
             }
@@ -48,7 +48,7 @@ public sealed partial class NGraphCreateSxemaByModelView
 
         }
 
-        private void Window_Closing(object sender, System.ComponentModel.CancelEventArgs e)
+        private void Window_Closing(object? sender, System.ComponentModel.CancelEventArgs e)
         {
             Cancel = true;
             e.Cancel = false;
@@ -110,9 +110,9 @@ public sealed partial class NGraphCreateSxemaByModelView
                 try
                 {
 #if REVIT2022_OR_GREATER
-                item_s = element.FindParameter(def.Name).AsValueString();
+                item_s = NgContext._FindParameter(element, def.Name)?.AsValueString() ?? string.Empty;
 #else
-                    item_s = element.LookupParameter(def.Name).AsString();
+                    item_s = NgContext._FindParameter(element, def.Name)?.AsString() ?? string.Empty;
 #endif
                     
                 }
@@ -137,9 +137,8 @@ public sealed partial class NGraphCreateSxemaByModelView
         private void GetParemeterList_Instance_And_Type(ParameterMap parameterMap, ref List<Parameter> parameters)
         {
 
-            foreach (var p in parameterMap)
+            foreach (Parameter parameter in parameterMap)
             {
-                Parameter parameter = p as Parameter;
 
 #if REVIT2022_OR_GREATER
                 var storageType = parameter.StorageType;
@@ -149,13 +148,13 @@ public sealed partial class NGraphCreateSxemaByModelView
 
                 if (storageType == StorageType.String || storageType == StorageType.Integer || storageType == StorageType.Double)
                 {
-                    if (parameters.Any(i => i.Definition.Name == (p as Parameter).Definition.Name)) //Если уже есть в списке
+                    if (parameters.Any(i => i.Definition.Name == parameter.Definition.Name)) //Если уже есть в списке
                     {
                         continue;
                     }
                     else
                     {
-                        parameters.Add(p as Parameter);
+                        parameters.Add(parameter);
                     }
                 }
                 else { continue; }
