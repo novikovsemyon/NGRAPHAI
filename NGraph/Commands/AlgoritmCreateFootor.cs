@@ -1,10 +1,9 @@
-﻿using Autodesk.Revit.Attributes;
+using Autodesk.Revit.Attributes;
 using Autodesk.Revit.DB.Mechanical;
 using Autodesk.Revit.UI;
 using NGraph.Core;
 using NGraph.Core.FunctionalScheme;
 using Nice3point.Revit.Toolkit.External;
-using Autodesk.Revit.Attributes;
 using Autodesk.Revit.Creation;
 using Document = Autodesk.Revit.DB.Document;
 
@@ -19,7 +18,7 @@ public class AlgoritmCreateFootor : ExternalCommand
 {
     public override void Execute()
     {
-        AlgoritmCreateFootorCommand(Document);
+        AlgoritmCreateFootorCommand(Application.ActiveUIDocument.Document);
     }
     public static void AlgoritmCreateFootorCommand(Document Document)
     {
@@ -35,7 +34,11 @@ public class AlgoritmCreateFootor : ExternalCommand
      var FindedFooters = fSAmethods.FootorFind(Document);
 
      #region 0. Get ActiveViewDrafting
-     ViewDrafting activeViewDrafting = Document.ActiveView as ViewDrafting;
+     if (Document.ActiveView is not ViewDrafting activeViewDrafting)
+     {
+         TaskDialog.Show("NGraph", "Откройте чертёжный вид перед построением схемы.");
+         return;
+     }
      #endregion
 
      #region 1. Read shema FSA (Get list <FSAHeader>)
@@ -58,7 +61,7 @@ public class AlgoritmCreateFootor : ExternalCommand
      
      while (fSAheaders.Any())
      {
-         var first = fSAheaders.FirstOrDefault();
+         var first = fSAheaders.First();
          if (first.Crossing.Count == 0)
          {
              ElementHeader elementHeader = new ElementHeader();
@@ -129,8 +132,8 @@ public class AlgoritmCreateFootor : ExternalCommand
 
                  
                  var groupedlXYZ = listSC
-                     .OrderBy(i => (i.GroupRevit?.Location as LocationPoint).Point.X)
-                     //.ThenByDescending((v => (v.GroupRevit.Location as LocationPoint).Point.Y))
+                     .OrderBy(i => ((i.GroupRevit?.Location as LocationPoint)?.Point ?? i.XYZ).X)
+                     //.ThenByDescending((v => v.GroupRevit.GetPlacementPoint().Y))
                      .ThenBy((i => i.XYZ.X))
                      //.ThenByDescending((y => y.XYZ.Y))
                      ;
@@ -214,7 +217,7 @@ public class AlgoritmCreateFootor : ExternalCommand
          var xyxFootors = new List<XYZ>();
          foreach (FSAfooter f in FindedFooters)
          {
-             xyxFootors.Add((f.FI.Location as LocationPoint).Point);
+             xyxFootors.Add(f.FI.GetPlacementPoint());
          }
          //Удаляем футеры и их элементы
          fSAmethods.RemooveNotPinnedElementFromFootor(Document, "FSA_CABEL_");
@@ -259,7 +262,7 @@ public class AlgoritmCreateFootor : ExternalCommand
 
      using (Transaction tr = new Transaction(Document, $"Вычисление Di Do Ai Ao"))
      {
-         var extention = true;
+
          tr.Start();
          try
          {
@@ -285,12 +288,12 @@ public class AlgoritmCreateFootor : ExternalCommand
 
 
      #region Получение информации о чертежном виде
-     ViewDrafting activeView = Document.ActiveView as ViewDrafting;
+     ViewDrafting activeView = activeViewDrafting;
      string FAS_Установка = "c02346dd-96c0-4c88-8cd5-f7ab6a5fa159";
-     var elements_AnnotationSymbol = Document.GetElements(activeView.Id).ToElements().OfType<AnnotationSymbol>().Where(k => k.get_Parameter(new Guid(FAS_Установка)) != null);
-     var elements_AnnotationSymbol_FSA_CABEL = Document.GetElements(activeView.Id).ToElements().OfType<AnnotationSymbol>().Where(k => k.Name.Contains("FSA_CABEL_"));
-     var elements_AnnotationSymbol_FSA_CABEL_FIRST = Document.GetElements(activeView.Id).ToElements().OfType<AnnotationSymbol>().Where(k => k.Name.Contains("FSA_CABEL_FIRST"));
-     var elements_FamilyInstance = Document.GetElements(activeView.Id).ToElements()
+     var elements_AnnotationSymbol = Document.CollectElements(activeView.Id).ToElements().OfType<AnnotationSymbol>().Where(k => k.get_Parameter(new Guid(FAS_Установка)) != null);
+     var elements_AnnotationSymbol_FSA_CABEL = Document.CollectElements(activeView.Id).ToElements().OfType<AnnotationSymbol>().Where(k => k.Name.Contains("FSA_CABEL_"));
+     var elements_AnnotationSymbol_FSA_CABEL_FIRST = Document.CollectElements(activeView.Id).ToElements().OfType<AnnotationSymbol>().Where(k => k.Name.Contains("FSA_CABEL_FIRST"));
+     var elements_FamilyInstance = Document.CollectElements(activeView.Id).ToElements()
          .OfType<FamilyInstance>()
          .Where(k => k.get_Parameter(new Guid(FAS_Установка)) != null)
          .Where(i => i.GetOrderedParameters().Where(k => k.Definition.Name.Contains("N_")).Count() > 0);
@@ -316,7 +319,7 @@ public class AlgoritmCreateFootor : ExternalCommand
                  var symId = new FilteredElementCollector(Document).
                      OfCategory(BuiltInCategory.OST_DetailComponentTags).
                      WhereElementIsElementType().
-                     ToList().Where(i => i.Name == "BE_Марка_Элемент_узла").FirstOrDefault().Id;
+                     First(i => i.Name == "BE_Марка_Элемент_узла").Id;
 
                  FilteredElementCollector fsCollector = new FilteredElementCollector(Document, activeView.Id);
 
@@ -326,9 +329,8 @@ public class AlgoritmCreateFootor : ExternalCommand
 
 
                  //Нумеруем только с названием Вертикально
-                 foreach (var element in collection.Where(i => i.Name == "Вертикально"))
+                 foreach (FamilyInstance familyInstance in collection.OfType<FamilyInstance>().Where(i => i.Name == "Вертикально"))
                  {
-                     FamilyInstance familyInstance = element as FamilyInstance;
                      XYZ DetailComponentsLocation = familyInstance.get_BoundingBox(activeView).Min;
                      Reference elRef = new Reference(familyInstance);
 

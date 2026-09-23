@@ -1,4 +1,4 @@
-﻿using Nice3point.Revit.Extensions.Runtime;
+using Nice3point.Revit.Extensions.Runtime;
 
 namespace NGraph.Core.FunctionalScheme;
 
@@ -65,7 +65,8 @@ namespace NGraph.Core.FunctionalScheme;
 
         public static List<DataDescription> FooterElementUser(Document doc,  ElementId elid, bool hastag)
         {
-            FamilyInstance HeadeFI = doc.GetElement(elid) as FamilyInstance;
+            FamilyInstance HeadeFI = doc.GetElement(elid) as FamilyInstance
+            ?? throw new InvalidOperationException($"Элемент {elid} не является экземпляром семейства.");
             DataDescription data = new DataDescription(
                 HeadeFI.LookupParameter(Const.Param_NS_Type).AsString(),
                 HeadeFI.LookupParameter(Const.Param_NS_Princip).AsString()
@@ -101,7 +102,8 @@ namespace NGraph.Core.FunctionalScheme;
 
         public static List<DataDescription> FooterElementUserUnknown(Document doc, ElementId elid)
         {
-            FamilyInstance HeadeFI = doc.GetElement(elid) as FamilyInstance;
+            FamilyInstance HeadeFI = doc.GetElement(elid) as FamilyInstance
+            ?? throw new InvalidOperationException($"Элемент {elid} не является экземпляром семейства.");
             DataDescription data = new DataDescription(
                 $"НЕТ В БАЗЕ   /{HeadeFI.Name}/",
                 $"{HeadeFI.Id.ToString()}"

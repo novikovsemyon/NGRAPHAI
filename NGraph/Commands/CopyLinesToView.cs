@@ -10,8 +10,8 @@ public class CopyLinesToView : ExternalCommand
 {
     public override void Execute()
     {
-        var views = UiDocument.Selection.GetElementIds()
-            .Select(Document.GetElement)
+        var views = Application.ActiveUIDocument.Selection.GetElementIds()
+            .Select(Application.ActiveUIDocument.Document.GetElement)
             .OfType<ViewDrafting>()
             .Where(view => !view.IsTemplate)
             .ToList();
@@ -23,7 +23,7 @@ public class CopyLinesToView : ExternalCommand
 
         var source = views[0];
         var target = views[1];
-        var lines = new FilteredElementCollector(Document, source.Id)
+        var lines = new FilteredElementCollector(Application.ActiveUIDocument.Document, source.Id)
             .OfClass(typeof(CurveElement))
             .OfType<DetailLine>()
             .Where(line => line.LineStyle?.Name.Contains("*NG*") == true)
@@ -34,13 +34,13 @@ public class CopyLinesToView : ExternalCommand
             return;
         }
 
-        using var transaction = new Transaction(Document, "NGraph: копирование кабельных линий");
+        using var transaction = new Transaction(Application.ActiveUIDocument.Document, "NGraph: копирование кабельных линий");
         transaction.Start();
         try
         {
             foreach (var line in lines)
             {
-                var copy = Document.Create.NewDetailCurve(target, line.GeometryCurve);
+                var copy = Application.ActiveUIDocument.Document.Create.NewDetailCurve(target, line.GeometryCurve);
                 copy.LineStyle = line.LineStyle;
                 copy.Pinned = line.Pinned;
             }

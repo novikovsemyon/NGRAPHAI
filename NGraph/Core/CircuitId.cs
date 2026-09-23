@@ -1,4 +1,4 @@
-﻿using Autodesk.Revit.DB.Electrical;
+using Autodesk.Revit.DB.Electrical;
 using Autodesk.Revit.UI;
 namespace NGraph.Core;
 
@@ -8,7 +8,8 @@ public class CircuitId
     public Element Element { get; }
     public FamilyInstance FI_BaseEquipment { get; }
     public List<FamilyInstance> FI_FromBaseEquipment { get; } = new List<FamilyInstance>();
-    public VertexId BaseEquipment { get; set; }
+    public VertexId BaseEquipment { get; }
+    public EQ Equipment { get; }
 
     /// <summary>
     /// Оборудование, подключенное к базовому элементу
@@ -42,13 +43,16 @@ public class CircuitId
 
 
 
-    public CircuitId(Element element, Document _doc)
+    public CircuitId(Element element, Document _doc, VertexId baseEquipment)
     {
         if (element is null) throw new ArgumentNullException(nameof(element));
         if (_doc is null) throw new ArgumentNullException(nameof(_doc));
         if (element is not ElectricalSystem electricalSystem)
             throw new ArgumentException("Элемент должен быть электрической цепью.", nameof(element));
 
+        BaseEquipment = baseEquipment ?? throw new ArgumentNullException(nameof(baseEquipment));
+        Equipment = baseEquipment.eQ
+            ?? throw new ArgumentException("Базовая вершина должна представлять оборудование.", nameof(baseEquipment));
         Element = element;
         FI_BaseEquipment = electricalSystem.BaseEquipment
             ?? throw new InvalidOperationException($"У электрической цепи {element.Id} не назначено базовое оборудование.");
@@ -115,24 +119,23 @@ public class CircuitId
                 continue;
 
             var vertexId = GraphId.GetVertexId(graphId, electricalSystem.BaseEquipment.Id);
-            if (vertexId is null)
+            if (vertexId?.eQ is null)
                 continue;
 
-            CircuitId circuit = new CircuitId(item, _doc);
+            CircuitId circuit = new CircuitId(item, _doc, vertexId);
             List<VertexId> listVertxId = new List<VertexId>();
             List<EQ> listEQ = new List<EQ>();
 
             foreach (FamilyInstance familyInstance in electricalSystem.Elements.OfType<FamilyInstance>())
             {
                 var connectedVertex = GraphId.GetVertexId(graphId, familyInstance.Id);
-                if (connectedVertex is null)
+                if (connectedVertex?.eQ is null)
                     continue;
 
                 listVertxId.Add(connectedVertex);
                 listEQ.Add(connectedVertex.eQ);
             }
 
-            circuit.BaseEquipment = vertexId;
             circuit.VerticesFromBaseEquipment = listVertxId;
             circuit.EQFromBaseEquipment = listEQ;
             circuitIds.Add(circuit);
@@ -210,16 +213,16 @@ public class CircuitId
      {
 
          //Выбираем цепи по уровням.
-         var selCircuitIds_Level0 = from CircuitId in circuitIds where CircuitId.BaseEquipment.eQ.Level == TypeOfLevel.Level0 select CircuitId;
-         var selCircuitIds_Level1 = from CircuitId in circuitIds where CircuitId.BaseEquipment.eQ.Level == TypeOfLevel.Level1 select CircuitId;
-         var selCircuitIds_Level2 = from CircuitId in circuitIds where CircuitId.BaseEquipment.eQ.Level == TypeOfLevel.Level2 select CircuitId;
-         var selCircuitIds_Level3 = from CircuitId in circuitIds where CircuitId.BaseEquipment.eQ.Level == TypeOfLevel.Level3 select CircuitId;
+         var selCircuitIds_Level0 = from CircuitId in circuitIds where CircuitId.Equipment.Level == TypeOfLevel.Level0 select CircuitId;
+         var selCircuitIds_Level1 = from CircuitId in circuitIds where CircuitId.Equipment.Level == TypeOfLevel.Level1 select CircuitId;
+         var selCircuitIds_Level2 = from CircuitId in circuitIds where CircuitId.Equipment.Level == TypeOfLevel.Level2 select CircuitId;
+         var selCircuitIds_Level3 = from CircuitId in circuitIds where CircuitId.Equipment.Level == TypeOfLevel.Level3 select CircuitId;
 
          //Группируем цепи по EQ
-         var group_selCircuitIds_Level0 = selCircuitIds_Level0.GroupBy(p => p.BaseEquipment.eQ);
-         var group_selCircuitIds_Level1 = selCircuitIds_Level1.GroupBy(p => p.BaseEquipment.eQ);
-         var group_selCircuitIds_Level2 = selCircuitIds_Level2.GroupBy(p => p.BaseEquipment.eQ);
-         var group_selCircuitIds_Level3 = selCircuitIds_Level3.GroupBy(p => p.BaseEquipment.eQ);
+         var group_selCircuitIds_Level0 = selCircuitIds_Level0.GroupBy(p => p.Equipment);
+         var group_selCircuitIds_Level1 = selCircuitIds_Level1.GroupBy(p => p.Equipment);
+         var group_selCircuitIds_Level2 = selCircuitIds_Level2.GroupBy(p => p.Equipment);
+         var group_selCircuitIds_Level3 = selCircuitIds_Level3.GroupBy(p => p.Equipment);
 
 
          //Выбираем оборудование по уровням.

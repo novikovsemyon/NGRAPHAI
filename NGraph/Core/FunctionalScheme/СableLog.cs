@@ -1,4 +1,4 @@
-﻿namespace NGraph.Core.FunctionalScheme;
+namespace NGraph.Core.FunctionalScheme;
 
 
 /// <summary>
@@ -6,17 +6,17 @@
 /// </summary>
 public class CableLog
 {
-    public string ОбозначениеКабеля { get; set; }
-    public string НачалоОбозначение { get; set; }
-    public string НачалоОборудование { get; set; }
-    public string КонецОбозначение { get; set; }
-    public string КонецОборудование { get; set; }
-    public string Трасса { get; set; }
-    public string МаркаКабеляПоПроекту { get; set; }
-    public string СечениеиЖилыПоПроекту { get; set; }
+    public string ОбозначениеКабеля { get; set; } = string.Empty;
+    public string НачалоОбозначение { get; set; } = string.Empty;
+    public string НачалоОборудование { get; set; } = string.Empty;
+    public string КонецОбозначение { get; set; } = string.Empty;
+    public string КонецОборудование { get; set; } = string.Empty;
+    public string Трасса { get; set; } = string.Empty;
+    public string МаркаКабеляПоПроекту { get; set; } = string.Empty;
+    public string СечениеиЖилыПоПроекту { get; set; } = string.Empty;
     public int Длина { get; set; }
-    public string ПроложеноМаркаКабеляПоПроекту { get; set; }
-    public string ПроложеноСечениеиЖилыПоПроекту { get; set; }
+    public string ПроложеноМаркаКабеляПоПроекту { get; set; } = string.Empty;
+    public string ПроложеноСечениеиЖилыПоПроекту { get; set; } = string.Empty;
     public int ПроложеноДлина { get; set; }
 
     public bool ПерезаписьПараметров { get; set; }

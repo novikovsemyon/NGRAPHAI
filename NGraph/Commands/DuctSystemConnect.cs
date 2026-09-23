@@ -1,4 +1,4 @@
-﻿using Autodesk.Revit.Attributes;
+using Autodesk.Revit.Attributes;
 using Autodesk.Revit.DB.Mechanical;
 using NGraph.Core;
 using Nice3point.Revit.Toolkit.External;
@@ -15,15 +15,20 @@ public class DuctSystemConnect : ExternalCommand
     
     public override void Execute()
     {
-        Element element = Helpers.SelectElementId(BuiltInCategory.OST_DuctCurves, UiDocument, Document);
+        Element element = Helpers.SelectElementId(BuiltInCategory.OST_DuctCurves, Application.ActiveUIDocument, Application.ActiveUIDocument.Document);
+        if (element is not Duct duct || duct.MEPSystem is not MechanicalSystem system)
+        {
+            Autodesk.Revit.UI.TaskDialog.Show("NGraph", "Выберите воздуховод, принадлежащий механической системе.");
+            return;
+        }
         Helpers helpers = new Helpers();
 
-        using (Transaction tr = new Transaction(Document, "NS_СonnectDuctMEPSystem"))
+        using (Transaction tr = new Transaction(Application.ActiveUIDocument.Document, "NS_СonnectDuctMEPSystem"))
         {
             tr.Start();
             try
             {
-                helpers.ConnectDuctCurveWith((element as Duct).MEPSystem, Document, BuiltInCategory.OST_ElectricalEquipment);
+                helpers.ConnectDuctCurveWith(system, Application.ActiveUIDocument.Document, BuiltInCategory.OST_ElectricalEquipment);
 
             }
             catch { }

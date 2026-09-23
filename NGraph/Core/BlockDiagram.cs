@@ -1,4 +1,4 @@
-﻿using Autodesk.Revit.UI;
+using Autodesk.Revit.UI;
 namespace NGraph.Core;
 
  /// <summary>
@@ -17,6 +17,7 @@ namespace NGraph.Core;
      public BlockDiagram (Document doc, ViewDrafting viewDrafting, XYZ beginPointOfMethod, TypeOfLevel Level, List<CircuitId> circuitIds, ref int indexBlockDiagram)
      {
          Begin = beginPointOfMethod;
+         End = beginPointOfMethod;
 
 
          this.viewDrafting = viewDrafting;
@@ -27,7 +28,7 @@ namespace NGraph.Core;
          XYZ deltaX = new XYZ(helpers.MillimetersToFeet(6), 0, 0);
          XYZ deltaY = new XYZ(0, helpers.MillimetersToFeet(6), 0);
 
-         var selectElSysLevel = circuitIds.Where(y => y.BaseEquipment.eQ.Level.Equals(Level)).GroupBy(y => y.BaseEquipment.eQ.Имя_панели); //Не последовательно ЦЕПЯМ!!!!
+         var selectElSysLevel = circuitIds.Where(y => y.Equipment.Level.Equals(Level)).GroupBy(y => y.Equipment.Имя_панели); //Не последовательно ЦЕПЯМ!!!!
 
          int indexBlockDiagramBaseEqupment = indexBlockDiagram;// Действеие определяет сквозную нумерацию
          
@@ -35,7 +36,7 @@ namespace NGraph.Core;
          {
              
              BlockDiagramBaseEqupment blockDiagramOfBaseEqupment =
-                 new BlockDiagramBaseEqupment(doc, viewDrafting,  selectedCircuitIds.FirstOrDefault().BaseEquipment.eQ, beginPointOfMethod, ref indexBlockDiagramBaseEqupment);
+                 new BlockDiagramBaseEqupment(doc, viewDrafting,  selectedCircuitIds.First().Equipment, beginPointOfMethod, ref indexBlockDiagramBaseEqupment);
              
              //т.к. экземпляр создан, то можно обратиться к его реальной геометрии и перезаписать приращение конечной точки
              blockDiagramOfBaseEqupment.XYZ_end = GroupSymbol.ReloadEnd(blockDiagramOfBaseEqupment.BaseGroupSymbol.Symbol_ID.FamilyInstance, viewDrafting);
@@ -77,7 +78,7 @@ namespace NGraph.Core;
              
              //Переходим на другую координату BaseEqupment, точнее перезаписываем точку входа в метод (beginPointOfMethod) в зависимости от условий FormatSxema
              
-             switch (selectedCircuitIds.FirstOrDefault().BaseEquipment.eQ.formatSxema) //Определяем как расположены ЦЕПИ относительно базового элемента
+             switch (selectedCircuitIds.First().Equipment.formatSxema) //Определяем как расположены ЦЕПИ относительно базового элемента
              {
                  //Растем по X
                  case FormatSxema.HorizontalFromLeftToRight: { beginPointOfMethod = beginPointOfMethod+ new XYZ(blockDiagramOfBaseEqupment.deltaXYZ.X, 0, 0)+deltaX; break; }
@@ -128,7 +129,7 @@ namespace NGraph.Core;
      void CreateLineInBlockDiagramCircuitIds(Document doc, BlockDiagramBaseEqupment blockDiagramBaseEqupment)
      {
          //Точка, от которой чертятся все цепи (локация базового элемента)
-         XYZ PoinBaseEqupment = (blockDiagramBaseEqupment.BaseGroupSymbol.Symbol_ID.FamilyInstance.Location as LocationPoint).Point;
+         XYZ PoinBaseEqupment = blockDiagramBaseEqupment.BaseGroupSymbol.Symbol_ID.FamilyInstance.GetPlacementPoint();
          List <XYZ> EndPoints =  new List <XYZ>(); //Накапливаем список точек от которых будут строитcя линии до PoinBaseEqupment
          using (Transaction tr = new Transaction(doc, $"Рисуем линии"))
          {
@@ -138,9 +139,10 @@ namespace NGraph.Core;
                  foreach (BlockDiagramCircuitId blockDiagramCircuitId in blockDiagramBaseEqupment.BlockDiagramCircuitIds)
                  {
                      //Точка последнего элемента
-                     XYZ PointLastEqupment = (blockDiagramCircuitId.GroupSymbols.LastOrDefault().Symbol_ID.FamilyInstance.Location as LocationPoint).Point;
-                     XYZ PointFirstOfMarka_ID = blockDiagramCircuitId.GroupSymbols.FirstOrDefault().Marka_ID.FamilyInstance.get_BoundingBox(viewDrafting).Min;
-                     XYZ PointLastOfMarka_ID = blockDiagramCircuitId.GroupSymbols.LastOrDefault().Marka_ID.FamilyInstance.get_BoundingBox(viewDrafting).Min;
+                     if (blockDiagramCircuitId.GroupSymbols.Count == 0) continue;
+                     XYZ PointLastEqupment = blockDiagramCircuitId.GroupSymbols.Last().Symbol_ID.FamilyInstance.GetPlacementPoint();
+                     XYZ PointFirstOfMarka_ID = blockDiagramCircuitId.GroupSymbols.First().Marka_ID.FamilyInstance.get_BoundingBox(viewDrafting).Min;
+                     XYZ PointLastOfMarka_ID = blockDiagramCircuitId.GroupSymbols.Last().Marka_ID.FamilyInstance.get_BoundingBox(viewDrafting).Min;
 
 
                      if (blockDiagramCircuitId.CircuitId.NSA_Цепь_звезда) //Если цепь звезда
@@ -148,7 +150,7 @@ namespace NGraph.Core;
                          
                          foreach(var groupSymbol in blockDiagramCircuitId.GroupSymbols) //Строим линии между символом и минимальной точкой марки
                          {
-                             XYZ PointEqupment = (groupSymbol.Symbol_ID.FamilyInstance.Location as LocationPoint).Point;
+                             XYZ PointEqupment = groupSymbol.Symbol_ID.FamilyInstance.GetPlacementPoint();
                              XYZ PointOfMarka_ID = groupSymbol.Marka_ID.FamilyInstance.get_BoundingBox(viewDrafting).Min;
                              
                              CreateLine(doc, PointEqupment, PointOfMarka_ID);

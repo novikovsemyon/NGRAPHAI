@@ -1,4 +1,4 @@
-﻿using System.Collections;
+using System.Collections;
 using Autodesk.Revit.UI;
 namespace NGraph.Core;
 
@@ -41,7 +41,8 @@ public class BlockDiagramCircuitId : Gabarit, IEnumerable
                 {
                     
                     //Определяем группу из символа и добавляем в список
-                    GroupSymbol groupSymbol = new GroupSymbol(new Symbol_ID(doc, viewDrafting, vId.eQ), new Marka_ID(doc, viewDrafting, vId.eQ.OrientationForMarka_ID), ref indexGroupSymbol);
+                    if (vId.eQ is not EQ equipment) continue;
+                    GroupSymbol groupSymbol = new GroupSymbol(new Symbol_ID(doc, viewDrafting, equipment), new Marka_ID(doc, viewDrafting, equipment.OrientationForMarka_ID), ref indexGroupSymbol);
                     
 
                     this.GroupSymbols.Add(groupSymbol);
@@ -81,10 +82,10 @@ public class BlockDiagramCircuitId : Gabarit, IEnumerable
                             groupSymbol.Marka_ID.FamilyInstance.LookupParameter("CJ_Жилы и сечение").Set(CircuitId.NSA_Кабель_жилы_сечение);
                             groupSymbol.Marka_ID.FamilyInstance.LookupParameter("CJ_Номер кабеля").Set(НомерКабеля);
                             groupSymbol.НомерКабеля = НомерКабеля;
-                            groupSymbol.Marka_ID.FamilyInstance.LookupParameter("CJ_Начало кабеля").Set(cab.WayId.Begin.eQ.Имя_панели);
-                            groupSymbol.Marka_ID.FamilyInstance.LookupParameter("CJ_Окончание кабеля").Set(cab.WayId.End.eQ.Имя_панели);
-                            groupSymbol.Marka_ID.FamilyInstance.LookupParameter("CJ_Начало кабеля_eq").Set(cab.WayId.Begin.eQ.ADSK_Наименование_краткое);
-                            groupSymbol.Marka_ID.FamilyInstance.LookupParameter("CJ_Окончание кабеля_eq").Set(cab.WayId.End.eQ.ADSK_Наименование_краткое);
+                            groupSymbol.Marka_ID.FamilyInstance.LookupParameter("CJ_Начало кабеля").Set(cab.WayId.Begin.eQ?.Имя_панели ?? string.Empty);
+                            groupSymbol.Marka_ID.FamilyInstance.LookupParameter("CJ_Окончание кабеля").Set(cab.WayId.End.eQ?.Имя_панели ?? string.Empty);
+                            groupSymbol.Marka_ID.FamilyInstance.LookupParameter("CJ_Начало кабеля_eq").Set(cab.WayId.Begin.eQ?.ADSK_Наименование_краткое ?? string.Empty);
+                            groupSymbol.Marka_ID.FamilyInstance.LookupParameter("CJ_Окончание кабеля_eq").Set(cab.WayId.End.eQ?.ADSK_Наименование_краткое ?? string.Empty);
 
                             try
                             {
@@ -92,7 +93,7 @@ public class BlockDiagramCircuitId : Gabarit, IEnumerable
                             }
                             catch //Если нет рабочего набора у элемента (файл без совместного доступа)
                             {
-                                groupSymbol.Marka_ID.FamilyInstance.LookupParameter("CJ_Рабочий набор").Set((doc.GetElement(groupSymbol.Marka_ID.FamilyInstance.OwnerViewId) as ViewDrafting).Name);
+                                groupSymbol.Marka_ID.FamilyInstance.LookupParameter("CJ_Рабочий набор").Set(viewDrafting.Name);
                             }
 
 
@@ -136,7 +137,7 @@ public class BlockDiagramCircuitId : Gabarit, IEnumerable
 
         //Записываем реальные координаты габаритов групп (после транзакции и создания экземпляра семейства).
         // И определяем реальные координаты всей цепочки [begin ,end]
-        XYZ[] begin_end = SetRealXYZ_GroupSymbol(GroupSymbols, viewDrafting);
+        XYZ[] begin_end = GroupSymbols.Count == 0 ? new[] { beginXYZ, beginXYZ } : SetRealXYZ_GroupSymbol(GroupSymbols, viewDrafting);
         XYZ_begin = begin_end[0];
         XYZ_end = begin_end[1];
         deltaXYZ = XYZ_end - XYZ_begin;

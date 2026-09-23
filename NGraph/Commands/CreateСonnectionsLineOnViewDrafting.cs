@@ -1,4 +1,4 @@
-﻿using System.IO;
+using System.IO;
 using Autodesk.Revit.Attributes;
 using Autodesk.Revit.DB.Mechanical;
 using Autodesk.Revit.UI;
@@ -7,7 +7,6 @@ using NGraph.Views;
 using NGraph.ViewModels;
 using NGraph.Core.FunctionalScheme;
 using Nice3point.Revit.Toolkit.External;
-using Autodesk.Revit.Attributes;
 using Nice3point.Revit.Extensions.Runtime;
 
 //using Autodesk.Revit.Creation;
@@ -26,24 +25,28 @@ namespace NGraph.Commands;
             FSAmethods fSAmethods = new FSAmethods();
             
             #region 0. Get ActiveViewDrafting
-            ViewDrafting activeViewDrafting = Document.ActiveView as ViewDrafting;
+            if (Application.ActiveUIDocument.ActiveView is not ViewDrafting activeViewDrafting)
+            {
+                TaskDialog.Show("NGraph", "Откройте чертёжный вид перед построением соединений.");
+                return;
+            }
             #endregion
             
             #region 1. Read shema FSA (Get list <FSAHeader>)
-            List<FSAheader> equipment = fSAmethods.ReadHederStruct_inversible(Document, activeViewDrafting);//Элементы узлов
+            List<FSAheader> equipment = fSAmethods.ReadHederStruct_inversible(Application.ActiveUIDocument.Document, activeViewDrafting);//Элементы узлов
 
-            List<FSAheader> cabel = fSAmethods.ReadHederStruct(Document, activeViewDrafting); //Зеленые точки
+            List<FSAheader> cabel = fSAmethods.ReadHederStruct(Application.ActiveUIDocument.Document, activeViewDrafting); //Зеленые точки
 
             //удаляем зеленые точки если они не закреплены
 
-            using (Transaction tr = new Transaction(Document, $"Удаляем зеленые точки если они не закреплены"))
+            using (Transaction tr = new Transaction(Application.ActiveUIDocument.Document, $"Удаляем зеленые точки если они не закреплены"))
             {
 
                 tr.Start();
                 try
                 {
                     var list = cabel.Where(i => i.FI.Pinned == false).Select(i => i.FI.Id).ToList();
-                    Document.Delete(list);
+                    Application.ActiveUIDocument.Document.Delete(list);
 
                 }
                 catch { }
@@ -55,9 +58,9 @@ namespace NGraph.Commands;
 
 
 
-            var collector = new FilteredElementCollector(Document, (Document.ActiveView as ViewDrafting).Id);
+            var collector = new FilteredElementCollector(Application.ActiveUIDocument.Document, activeViewDrafting.Id);
             var lines = collector.OfCategory(BuiltInCategory.OST_Lines).WhereElementIsNotElementType().ToElements()
-                    .Where(i => i.LookupParameter("Стиль линий").AsValueString().Contains("*NG*"))
+                    .OfType<CurveElement>().Where(i => i.LineStyle?.Name.Contains("*NG*") == true).Cast<Element>()
                 ;
 
             #endregion 1.
@@ -80,7 +83,7 @@ namespace NGraph.Commands;
             Подграф может иметь вид -|- или ---
             */
             
-            using (Transaction tr = new Transaction(Document, $"Создаем зеленые точки заново"))
+            using (Transaction tr = new Transaction(Application.ActiveUIDocument.Document, $"Создаем зеленые точки заново"))
             {
 
                 tr.Start();
@@ -89,21 +92,21 @@ namespace NGraph.Commands;
                     int minus = 0;//Участвует в нумерации (вычитаем если есть неопределенность в графе, т.е. граф не используется
                     foreach (var g in graphOfLines.SubGraph)
                     {
-                        var vertexEement = g.Value.Vertices.Where(i => i.Name != null).ToList();//Список вершин с оборудованием
+                        var vertexEement = g.Value.Vertices.Where(i => i.Name != ElementId.InvalidElementId).ToList();//Список вершин с оборудованием
                         var vertexEement_ends = vertexEement.Where(i => i.Edges.Count == 1);//Список вершин с оборудованием  c одним ребром
                         var vertexEement_nodes = vertexEement.Where(i => i.Edges.Count > 1);//Список вершин с оборудованием узловые
 
 
-                        var vertexEementOnBus = vertexEement.Where(i => i.Edges.Any(j => j.ElementOfCurve.Pinned)).ToList();//Список вершин с оборудованием, которое находится на закрепленной кривой
+                        var vertexEementOnBus = vertexEement.Where(i => i.Edges.Any(j => j.ElementOfCurve?.Pinned == true)).ToList();//Список вершин с оборудованием, которое находится на закрепленной кривой
 
 
                         //Если есть элемент в вершине на закрепленной кривой - то это начальная вершина шины, а граф представляет множество вершин
                         if (vertexEementOnBus.Any())
                         {
-                            VertexId begin = vertexEementOnBus.FirstOrDefault();
-                            Element begin_element = Document.GetElement(begin.Name);
+                            VertexId begin = vertexEementOnBus.First();
+                            Element begin_element = Application.ActiveUIDocument.Document.GetElement(begin.Name);
                             //Выбираем остальные вершины
-                            var ends = g.Value.Vertices.Where(i => (i.Name != null) && (i != begin));
+                            var ends = g.Value.Vertices.Where(i => (i.Name != ElementId.InvalidElementId) && (i != begin));
                             int numberCabel = g.Key- minus;
                             int numberInBus = 1;
                             foreach (VertexId end in ends)
@@ -111,7 +114,8 @@ namespace NGraph.Commands;
                                 var fi = TransactionCreateCabel(activeViewDrafting, begin, end, numberInBus, numberCabel);
                                 numberInBus++;
                                 
-                                EdgeId needEdge = end.Edges.FirstOrDefault();
+                                var needEdge = end.Edges.FirstOrDefault();
+                                 if (needEdge is null) continue;
                                 CreateMetkaByCenterEdgeId(activeViewDrafting, needEdge, fi);
 
                             }
@@ -120,10 +124,10 @@ namespace NGraph.Commands;
                         //Если всего два элемента (две вершины с оборудованием) в графе
                         else if (vertexEement.Count()==2 )
                         {
-                            VertexId begin = vertexEement.LastOrDefault();
-                            Element begin_element = Document.GetElement(begin.Name);
-                            VertexId end = vertexEement.FirstOrDefault();
-                            Element end_element = Document.GetElement(end.Name);
+                            VertexId begin = vertexEement.Last();
+                            Element begin_element = Application.ActiveUIDocument.Document.GetElement(begin.Name);
+                            VertexId end = vertexEement.First();
+                            Element end_element = Application.ActiveUIDocument.Document.GetElement(end.Name);
                             
                             int numberCabel = g.Key- minus;
                             int numberInBus = 0;
@@ -135,7 +139,8 @@ namespace NGraph.Commands;
                                 list.AddRange(item.Edges);
                             }
                             //Ребро с максимальной длиной
-                            EdgeId needEdge = list.Distinct().ToList().OrderBy(i => i.Curve.Length).LastOrDefault();
+                            var needEdge = list.Distinct().OrderBy(i => i.Length_mm).LastOrDefault();
+                             if (needEdge is null) continue;
                             CreateMetkaByCenterEdgeId(activeViewDrafting, needEdge, fi);
                         }
 
@@ -161,10 +166,9 @@ namespace NGraph.Commands;
         FamilyInstance FICreateWithoutTransaction(Document doc, XYZ XYZ, ViewDrafting activeView, string elementName)
         {
     
-            FamilyInstance fi = null;
-            fi = (doc.Create.NewFamilyInstance(XYZ, new FilteredElementCollector(doc)
+            FamilyInstance fi = (doc.Create.NewFamilyInstance(XYZ, new FilteredElementCollector(doc)
                 .OfClass(typeof(FamilySymbol))
-                .First(q => q.Name == elementName) as FamilySymbol, activeView));
+                .OfType<FamilySymbol>().First(q => q.Name == elementName), activeView));
             return fi;
     
 
@@ -172,14 +176,16 @@ namespace NGraph.Commands;
         
         FamilyInstance TransactionCreateCabel(ViewDrafting activeViewDrafting, VertexId begin_vertexId, VertexId end_vertexId, int numberInBus, int numberCabel)
         {
-            Element begin_element = Document.GetElement(begin_vertexId.Name);
-            Element end_element = Document.GetElement(end_vertexId.Name);
+            Element begin_element = Application.ActiveUIDocument.Document.GetElement(begin_vertexId.Name);
+            Element end_element = Application.ActiveUIDocument.Document.GetElement(end_vertexId.Name);
             //Размещаем семейство зеленой точки
-            FamilyInstance fi = FICreateWithoutTransaction(Document, end_vertexId.Xyz, activeViewDrafting, Const.Element_Header_Users);
+            FamilyInstance fi = FICreateWithoutTransaction(Application.ActiveUIDocument.Document, end_vertexId.Xyz, activeViewDrafting, Const.Element_Header_Users);
 
             //Назначение параметров
-            string detailLineTypeName = end_vertexId.Edges.FirstOrDefault().Curve.GraphicsStyleId.ToElement(Document)
-                .Name.ToString();
+            string detailLineTypeName = end_vertexId.Edges.Select(edge => edge.ElementOfCurve)
+                .OfType<CurveElement>().Select(curve => curve.LineStyle?.Name)
+                .FirstOrDefault(name => !string.IsNullOrWhiteSpace(name))
+                ?? throw new InvalidOperationException("У конечного элемента не найден стиль кабельной линии.");
             string marka = detailLineTypeName.TrimStart('*', 'N', 'G').Split('*')[0];
             string nets = detailLineTypeName.TrimStart('*', 'N', 'G').Split('*')[1];
 
@@ -205,11 +211,13 @@ namespace NGraph.Commands;
 
             //Получаем расстояние между элементами
             int round = 5000;
-            ElementId elementId_begin = new ElementId(int.Parse(begin_element.LookupParameter(Const.Param_NS_ElementId).AsString()));
-            XYZ xyx_begin = (Document.GetElement(elementId_begin).Location as LocationPoint).Point;
+            ElementId elementId_begin = RevitElementAccess.CreateId(long.Parse(begin_element.LookupParameter(Const.Param_NS_ElementId).AsString()));
+            XYZ xyx_begin = (Application.ActiveUIDocument.Document.GetElement(elementId_begin)
+                ?? throw new InvalidOperationException($"Не найден элемент модели {elementId_begin}.")).GetPlacementPoint();
 
-            ElementId elementId_end = new ElementId(int.Parse(end_element.LookupParameter(Const.Param_NS_ElementId).AsString()));
-            XYZ xyx_end = (Document.GetElement(elementId_end).Location as LocationPoint).Point;
+            ElementId elementId_end = RevitElementAccess.CreateId(long.Parse(end_element.LookupParameter(Const.Param_NS_ElementId).AsString()));
+            XYZ xyx_end = (Application.ActiveUIDocument.Document.GetElement(elementId_end)
+                ?? throw new InvalidOperationException($"Не найден элемент модели {elementId_end}.")).GetPlacementPoint();
             int lenght_behind_two_point = Helpers.LenghtInt((int)(((Math.Abs(xyx_begin.X - xyx_end.X) + Math.Abs(xyx_begin.Y - xyx_end.Y) + Math.Abs(xyx_begin.Z - xyx_end.Z)) * 304.8)), round) / 1000;
 
             fi.LookupParameter(Const.Param_CJ_Lenght).Set(lenght_behind_two_point);
@@ -220,10 +228,10 @@ namespace NGraph.Commands;
             //для маркировки
             TagMode tagMode = TagMode.TM_ADDBY_CATEGORY;
             TagOrientation tagorn = TagOrientation.Horizontal;
-            var symId = new FilteredElementCollector(Document).
+            var symId = new FilteredElementCollector(Application.ActiveUIDocument.Document).
                 OfCategory(BuiltInCategory.OST_DetailComponentTags).
                 WhereElementIsElementType().
-                ToList().Where(i => i.Name == "BE_Марка_Элемент_узла").FirstOrDefault().Id;
+                First(i => i.Name == "BE_Марка_Элемент_узла").Id;
             //Найдем центр ребра
             var Point1 = needEdge.From.Xyz;
             var Point2 = needEdge.To.Xyz;
@@ -235,7 +243,7 @@ namespace NGraph.Commands;
             );
 
             Reference elRef = new Reference(fi);
-            IndependentTag newTag = IndependentTag.Create(Document, symId, activeViewDrafting.Id, elRef, false, tagorn, Point);
+            IndependentTag newTag = IndependentTag.Create(Application.ActiveUIDocument.Document, symId, activeViewDrafting.Id, elRef, false, tagorn, Point);
 
 
     
@@ -248,9 +256,9 @@ namespace NGraph.Commands;
         /// <returns></returns>
         public void Get_GraphOfLines(GraphId graph, List<Element> element, ViewDrafting activeViewDrafting, List<FSAheader> fSAheaders)
         {
-            foreach (Element e in element) //Добавляем вершины
+            foreach (CurveElement e in element.OfType<CurveElement>()) //Добавляем вершины
             {
-                var curve = (e.Location as LocationCurve).Curve;
+                var curve = e.GeometryCurve;
 
                 var pointsCurve = curve.Tessellate();
 
@@ -306,11 +314,11 @@ namespace NGraph.Commands;
 
             //получаем все ребра и находим закрепленные
             var ed = GraphId.GetAllEgesId(graph);//Все ребра
-            var EdPinned = ed.Where(i => i.ElementOfCurve.Pinned);
+            var EdPinned = ed.Where(i => i.ElementOfCurve?.Pinned == true);
             //Ищем вершины на закрепленных ребрах
             foreach (EdgeId e in ed)//Ищем вершины по всем ребрам подграфа на его кривых
             {
-                BoundingBoxXYZ boundingBoxXYZ = e.ElementOfCurve.get_BoundingBox(activeViewDrafting);
+                if (e.ElementOfCurve?.get_BoundingBox(activeViewDrafting) is not BoundingBoxXYZ boundingBoxXYZ) continue;
                 foreach (var v in graph.Vertices)
                 {
                     if (Helpers.Contains(boundingBoxXYZ, v.Xyz,false) && v.Equals(e.From) != true && v.Equals(e.To) != true)
@@ -332,9 +340,9 @@ namespace NGraph.Commands;
         /// </summary>
         /// <param name="graph"></param>
         /// <returns></returns>
-        VertexId GetVertexWithSamePoint(GraphId graph, XYZ point)
+        VertexId? GetVertexWithSamePoint(GraphId graph, XYZ point)
         {
-            VertexId vertexId = graph.Vertices.Where(i => HaveSameXYZ(i.Xyz, point, 1)).FirstOrDefault();
+            VertexId? vertexId = graph.Vertices.Where(i => HaveSameXYZ(i.Xyz, point, 1)).FirstOrDefault();
      
             return vertexId;
         }

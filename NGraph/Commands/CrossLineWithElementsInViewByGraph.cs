@@ -1,4 +1,4 @@
-﻿using Autodesk.Revit.Attributes;
+using Autodesk.Revit.Attributes;
 using Autodesk.Revit.DB.Mechanical;
 using NGraph.Core;
 using Nice3point.Revit.Toolkit.External;
@@ -25,7 +25,7 @@ public class CrossLineWithElementsInViewByGraph : ExternalCommand
         //Выбираем оборудование
         
         OST_ElectricalEquipmentSelectionFilter electricalEquipmentSelectionFilter = new OST_ElectricalEquipmentSelectionFilter();
-        var elements = UiDocument.Selection.PickObjects(ObjectType.Element, electricalEquipmentSelectionFilter, "Выбирете элементы").ToList().ConvertAll<Element>(i => i.ElementId.ToElement(Document));
+        var elements = Application.ActiveUIDocument.Selection.PickObjects(ObjectType.Element, electricalEquipmentSelectionFilter, "Выбирете элементы").Select(i => Application.ActiveUIDocument.Document.GetElement(i.ElementId)).OfType<Element>().ToList();
 
 
         //var elements = UiDocument.Selection.GetElementIds().Select(i => i.ToElement(Document));
@@ -38,22 +38,24 @@ public class CrossLineWithElementsInViewByGraph : ExternalCommand
         //   .Where(i => i.LookupParameter("Стиль линий").AsValueString().Contains("*NG*"));
         //var activeViewDrafting = Document.ActiveView;
 
-        var lineBegin = new ElementId(BuiltInCategory.INVALID);
+        var lineBegin = ElementId.InvalidElementId;
         OST_LinesSelectionFilter linesSelectionFilter = new OST_LinesSelectionFilter();
         int count = 0;
         while (count<2)
         {
 
-            lineBegin = UiDocument.Selection.PickObject(ObjectType.Element, linesSelectionFilter, "Укажите линию начала отсчета").ElementId;
+            lineBegin = Application.ActiveUIDocument.Selection.PickObject(ObjectType.Element, linesSelectionFilter, "Укажите линию начала отсчета").ElementId;
 
+            if (Application.ActiveUIDocument.Document.GetElement(lineBegin) is not DetailLine selectedLine)
+                return;
             if (
-                ((lineBegin.ToElement(Document) as DetailLine).GetAdjoinedCurveElements(0).Count == 1)
+                (selectedLine.GetAdjoinedCurveElements(0).Count == 1)
                 &
-                 ((lineBegin.ToElement(Document) as DetailLine).GetAdjoinedCurveElements(1).Count == 1)
+                 (selectedLine.GetAdjoinedCurveElements(1).Count == 1)
                 )
             {
                 TaskDialog.Show("Ошибка ", "Укажитете первую линию");
-                lineBegin = new ElementId(BuiltInCategory.INVALID);
+                lineBegin = ElementId.InvalidElementId;
                 count++;
             }
             else
@@ -67,6 +69,7 @@ public class CrossLineWithElementsInViewByGraph : ExternalCommand
 
 
         //var lineBegin = Document.GetElement(new ElementId(1248253)).Id;
+        if (lineBegin == ElementId.InvalidElementId) return;
         List<ElementId> list = new List<ElementId>();
         list.Add(lineBegin);
         var falag = true;
@@ -76,7 +79,7 @@ public class CrossLineWithElementsInViewByGraph : ExternalCommand
         while (falag)
         {
 
-            var lastDetailLine = list.LastOrDefault().ToElement(Document) as DetailLine; //Последняя линия, добавленная в списке
+            if (Application.ActiveUIDocument.Document.GetElement(list.Last()) is not DetailLine lastDetailLine) break; //Последняя линия, добавленная в списке
             var connectedDetailLine0 = lastDetailLine.GetAdjoinedCurveElements(0).FirstOrDefault();
             var connectedDetailLine1 = lastDetailLine.GetAdjoinedCurveElements(1).FirstOrDefault();
             
@@ -92,12 +95,12 @@ public class CrossLineWithElementsInViewByGraph : ExternalCommand
                 
             }
             
-            if (list.Contains(connectedDetailLine0) == false)
+            if (connectedDetailLine0 != null && !list.Contains(connectedDetailLine0))
             {
                 if (connectedDetailLine0 != null)
                     list.Add(connectedDetailLine0);
             }
-            if (list.Contains(connectedDetailLine1) == false)
+            if (connectedDetailLine1 != null && !list.Contains(connectedDetailLine1))
             {
                 if (connectedDetailLine1 != null)
                     list.Add(connectedDetailLine1);
@@ -112,7 +115,7 @@ public class CrossLineWithElementsInViewByGraph : ExternalCommand
         
 
         //TaskDialog.Show("Выбор линии ", "Последовательность из "+ list.Count().ToString() + " отрезков");
-        var lines = list.ConvertAll<Element>(i=>i.ToElement(Document));
+        var lines = list.Select(i => Application.ActiveUIDocument.Document.GetElement(i)).OfType<CurveElement>().ToList();
         
         //Выбираем элементы
         /*
@@ -139,9 +142,9 @@ public class CrossLineWithElementsInViewByGraph : ExternalCommand
         List<BigSegment> bigSegments = new List<BigSegment>();
         List<ElementInGraph> elementsInGrahp = new List<ElementInGraph>();
         
-        foreach (Element e in lines)
+        foreach (CurveElement e in lines)
         {
-            bigSegments.Add(new BigSegment((e.Location as LocationCurve).Curve));
+            bigSegments.Add(new BigSegment(e.GeometryCurve));
         }
         
         foreach (Element e in elements)
@@ -194,7 +197,8 @@ public class CrossLineWithElementsInViewByGraph : ExternalCommand
         //Добавляем к вершинам оборудование
         foreach (ElementInGraph e in elementsInGrahp)
         {
-            var v = GetVertexWithSamePoint(graphOfLines_rev1, e.NearestDistanceToCurve.ProjectedPoint);
+            var v = GetVertexWithSamePoint(graphOfLines_rev1, e.NearestDistanceToCurve.ProjectedPoint)
+                ?? throw new InvalidOperationException($"Не найдена вершина для элемента {e.Element.Id}.");
             v.Objects.Add(e);
             
         }
@@ -203,36 +207,31 @@ public class CrossLineWithElementsInViewByGraph : ExternalCommand
 
         //Выбираем линию по ElementId
         //var line = lines.Where(i => i.Id == new ElementId(1234762)).FirstOrDefault().Location as LocationCurve;
-        var line = lineBegin.ToElement(Document).Location as LocationCurve;
-        //Выбираем вершину относительно линии с одним ребром
-        List<VertexId> mass = new List<VertexId>()  
+        if (Application.ActiveUIDocument.Document.GetElement(lineBegin) is not DetailLine firstLine) return;
+        var curve = firstLine.GeometryCurve;
+        var endpoints = new[]
         {
-            GetVertexWithSamePoint(graphOfLines_rev1, line.Curve.Tessellate().FirstOrDefault()),
-            GetVertexWithSamePoint(graphOfLines_rev1, line.Curve.Tessellate().LastOrDefault()),
+            GetVertexWithSamePoint(graphOfLines_rev1, curve.GetEndPoint(0)),
+            GetVertexWithSamePoint(graphOfLines_rev1, curve.GetEndPoint(1))
         };
-        VertexId vertexId_begin = mass.Where(i => i.Edges.Count == 1).FirstOrDefault();
+        var vertexId_begin = endpoints.OfType<VertexId>().FirstOrDefault(vertex => vertex.Edges.Count == 1);
+        var vertexId_end = graphOfLines_rev1.Vertices.FirstOrDefault(vertex => vertex.Edges.Count == 1 && vertex != vertexId_begin);
+        if (vertexId_begin is null || vertexId_end is null)
+        {
+            TaskDialog.Show("NGraph", "Не найдены начало и конец цепочки линий.");
+            return;
+        }
 
-
-
-
-        Dictionary<VertexId, List<VertexId>> dv = new Dictionary<VertexId, List<VertexId>>();
-        Dictionary<VertexId, List<EdgeId>> de = new Dictionary<VertexId, List<EdgeId>>();
-        GraphId.Dijkstra(graphOfLines_rev1, vertexId_begin, out dv, out de);
-
-        List<VertexId> vertexIds = new List<VertexId>();
-
-        //Выбираем выбираем другую вершину с одним ребром не равную этой vertexIds
-
-        VertexId vertexId_end = graphOfLines_rev1.Vertices.Where(i=>i.Edges.Count ==1).Where(i=>i.Equals(vertexId_begin) == false).FirstOrDefault();
-        dv.TryGetValue(vertexId_end, out vertexIds);
-
-
+        GraphId.Dijkstra(graphOfLines_rev1, vertexId_begin, out var paths, out _);
+        if (!paths.TryGetValue(vertexId_end, out var vertexIds) || vertexIds.Count == 0)
+        {
+            TaskDialog.Show("NGraph", "Между началом и концом цепочки нет пути.");
+            return;
+        }
         vertexIds.Insert(0, vertexId_begin);
 
-
-
         int j = 1;
-        using (Transaction tx = new Transaction(Document, "Нумерация по линии"))
+        using (Transaction tx = new Transaction(Application.ActiveUIDocument.Document, "Нумерация по линии"))
         {
             tx.Start("Нумерация по линии");
 
@@ -240,10 +239,10 @@ public class CrossLineWithElementsInViewByGraph : ExternalCommand
             foreach (var v in vertexIds)
             {
 
-                foreach (var e in v.Objects)
+                foreach (var e in v.Objects.OfType<ElementInGraph>())
                 {
 
-                    NgContext._FindParameter((e as ElementInGraph).Element, "Имя панели").Set(j.ToString());
+                    NgContext.RequireParameter(e.Element, "Имя панели").Set(j.ToString());
 
                     j++;
                 }
@@ -316,9 +315,9 @@ public class CrossLineWithElementsInViewByGraph : ExternalCommand
         
        
         
-        VertexId GetVertexWithSamePoint(GraphId graph, XYZ point)
+        VertexId? GetVertexWithSamePoint(GraphId graph, XYZ point)
         {
-            VertexId vertexId = graph.Vertices.Where(i => HaveSameXyz(i.Xyz, point, 1)).FirstOrDefault();
+            VertexId? vertexId = graph.Vertices.Where(i => HaveSameXyz(i.Xyz, point, 1)).FirstOrDefault();
 
             return vertexId;
         }
@@ -399,7 +398,8 @@ public class CrossLineWithElementsInViewByGraph : ExternalCommand
                     DistancesToCurve.Add(distanceToCurve);
                 }
 
-                NearestDistanceToCurve = DistancesToCurve.Where(i=>i.Distance == DistancesToCurve.Min(a => a.Distance)).FirstOrDefault();
+                NearestDistanceToCurve = DistancesToCurve.OrderBy(i => i.Distance).FirstOrDefault()
+                    ?? throw new InvalidOperationException("Не выбраны линии для нумерации оборудования.");
                 NearestoBigSegment = NearestDistanceToCurve.BigSegment;
             }
 
@@ -427,9 +427,9 @@ public class CrossLineWithElementsInViewByGraph : ExternalCommand
                 Element = element;
                 //Для каждой линии находим расстояние до элемента (по перпендикуляру и конечным точкам) . Перпендикуляр проверить на возможность построения к прямой
                 // Выполняем проекцию
-                var Projection = BigSegment.Curve.Project((element.Location as LocationPoint).Point);
+                var Projection = BigSegment.Curve.Project(element.GetPlacementPoint())
+                    ?? throw new InvalidOperationException($"Не удалось спроецировать элемент {element.Id} на линию.");
 
-                if (Projection != null)
                 {
                     // Координаты точки проекции на линии
                     ProjectedPoint = Projection.XYZPoint;
@@ -492,7 +492,7 @@ public class CrossLineWithElementsInViewByGraph : ExternalCommand
         {
             public bool AllowElement(Element element)
             {
-                if (element.Category.Name == "Линии")
+                if (element is DetailLine)
                 {
                     return true;
                 }

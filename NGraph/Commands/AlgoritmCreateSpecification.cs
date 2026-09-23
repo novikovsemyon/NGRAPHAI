@@ -22,7 +22,7 @@ public class AlgoritmCreateSpecification : ExternalCommand
         // Читаем настройки при запуске: сохранённое имя действует без перезапуска Revit.
         string nameOfBdViewDrafting = NGraph.Core.UserSettings.Load().EquipmentView;
         var helper = new Helpers();
-        var view = helper.AllElementsOfCategory(Document, BuiltInCategory.OST_Views)
+        var view = helper.AllElementsOfCategory(Application.ActiveUIDocument.Document, BuiltInCategory.OST_Views)
             .FirstOrDefault(x => x.Name == nameOfBdViewDrafting);
 
 
@@ -35,7 +35,7 @@ public class AlgoritmCreateSpecification : ExternalCommand
             return;
         }
         /*
-        var elements = Document.GetElements(view.Id);
+        var elements = Document.CollectElements(view.Id);
 
         var specifications = elements.ToList().Where(x => x.GetType() == typeof(AnnotationSymbol)).ToList()
             .Where(i => NgContext._FindParameter(i,"Тип")!.AsValueString().Contains("Спецификация_short")).ToList();
@@ -48,7 +48,7 @@ public class AlgoritmCreateSpecification : ExternalCommand
 
         //
 
-        var greenPoints = Document.GetElements(ActiveView.Id).ToList().Where(x => x.GetType() == typeof(FamilyInstance))
+        var greenPoints = Application.ActiveUIDocument.Document.CollectElements(Application.ActiveUIDocument.ActiveView.Id).ToList().Where(x => x.GetType() == typeof(FamilyInstance))
             .ToList()
             .Where(i => NgContext._FindParameter(i, "Тип")!.AsValueString().Contains("FAS_точка")).ToList();
 
@@ -61,7 +61,7 @@ public class AlgoritmCreateSpecification : ExternalCommand
         {
             var gr = e.GroupBy(i => i);
             if (e.Key.IsNullOrWhiteSpace()) continue;
-            var elementSpecification = new ElementSpecification(Document, e.Key)
+            var elementSpecification = new ElementSpecification(Application.ActiveUIDocument.Document, e.Key)
             {
                 Количество = gr.Count()
             };
@@ -72,7 +72,7 @@ public class AlgoritmCreateSpecification : ExternalCommand
         spec.ElementSpecifications.Count();
 
 
-        using var tr = new Transaction(Document, $"Размещение спецификации");
+        using var tr = new Transaction(Application.ActiveUIDocument.Document, $"Размещение спецификации");
         tr.Start();
         try
         {
@@ -81,7 +81,7 @@ public class AlgoritmCreateSpecification : ExternalCommand
             foreach (var sp in spec.ElementSpecifications) //Точки и марки
             {
                 
-                FamilyInstance fi = Document.Create.NewFamilyInstance(xyz+step, sp.Fs, ActiveView);
+                FamilyInstance fi = Application.ActiveUIDocument.Document.Create.NewFamilyInstance(xyz+step, sp.Fs, Application.ActiveUIDocument.ActiveView);
 
                 fi.LookupParameter("_Установка").Set(sp.Установка);
                 fi.LookupParameter("ADSK_Наименование").Set(sp.Наименование);
@@ -130,11 +130,10 @@ public class AlgoritmCreateSpecification : ExternalCommand
         public int Количество { get; set; }
         //string Примечание{ get; set; } 
 
-        private FamilyInstance FI { get; }
 
         public ElementSpecification(Document doc, string id)
         {
-            El = doc.GetElement(new ElementId(int.Parse(id)));
+            El = doc.GetElement(RevitElementAccess.CreateId(long.Parse(id)));
             Fs = (El as AnnotationSymbol)?.Symbol;
             Наименование = NgContext._FindParameter(El, "ADSK_Наименование")?.AsString();
             НаименованиеКраткое = NgContext._FindParameter(El, "ADSK_Наименование краткое")?.AsString();

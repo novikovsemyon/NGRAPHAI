@@ -1,4 +1,4 @@
-﻿using System.Diagnostics.Contracts;
+using System.Diagnostics.Contracts;
 using Autodesk.Revit.DB.Mechanical;
 using Autodesk.Revit.UI;
 using Autodesk.Revit.UI.Selection;
@@ -177,9 +177,8 @@ namespace NGraph.Core
             FilteredElementCollector fsCollector = new FilteredElementCollector(document, view.Id);
             fsCollector.OfClass(typeof(FamilyInstance)).OfCategory(BuiltInCategory.OST_DetailComponents);
             ICollection<Element> collection = fsCollector.ToElements();
-            foreach (var element in collection)
+            foreach (FamilyInstance familyInstance in collection.OfType<FamilyInstance>())
             {
-                FamilyInstance familyInstance = element as FamilyInstance;
                 XYZ DetailComponentsLocation = familyInstance.get_BoundingBox(view).Min;
                 Reference elRef = new Reference(familyInstance);
                 IndependentTag newTag = IndependentTag.Create(document, view.Id, elRef, true, tagMode, tagorn, DetailComponentsLocation);
@@ -238,7 +237,8 @@ namespace NGraph.Core
         public void DisConnectDuctCurveWith(MEPSystem mepsystem, Document _doc, BuiltInCategory builtInCategory)
         {
 
-            var faminst = (mepsystem as MechanicalSystem).DuctNetwork.OfType<FamilyInstance>();
+            var faminst = (mepsystem as MechanicalSystem
+                ?? throw new ArgumentException("Требуется механическая система.", nameof(mepsystem))).DuctNetwork.OfType<FamilyInstance>();
             foreach (var item in faminst)
             {
 
@@ -270,11 +270,13 @@ namespace NGraph.Core
         /// <returns></returns>
         public void ConnectDuctCurveWith(MEPSystem mepsystem, Document _doc, BuiltInCategory builtInCategory)
         {
-            var ducts = (mepsystem as MechanicalSystem).DuctNetwork.OfType<Duct>();
-            //var faminst = (mepsystem as MechanicalSystem).DuctNetwork.OfType<FamilyInstance>();
+            var ducts = (mepsystem as MechanicalSystem
+                ?? throw new ArgumentException("Требуется механическая система.", nameof(mepsystem))).DuctNetwork.OfType<Duct>();
+            //var faminst = (mepsystem as MechanicalSystem
+                ?? throw new ArgumentException("Требуется механическая система.", nameof(mepsystem))).DuctNetwork.OfType<FamilyInstance>();
 
             var collector = new FilteredElementCollector(_doc);
-            var listofelements = collector.OfCategory(builtInCategory).WhereElementIsNotElementType().ToElements();
+            var listofelements = collector.OfCategory(builtInCategory).WhereElementIsNotElementType().OfType<FamilyInstance>().ToList();
 
 
             foreach (var d in ducts)
@@ -285,9 +287,9 @@ namespace NGraph.Core
                     {
                         foreach (var fi in listofelements)
                         {
-                            if (GetCategory.GetBuiltInCategory((fi as Element).Category) == builtInCategory)
+                            if (GetCategory.GetBuiltInCategory(fi.Category) == builtInCategory)
                             {
-                                foreach (Connector connectorElecticalEq in (fi as FamilyInstance).MEPModel.ConnectorManager.Connectors)
+                                foreach (Connector connectorElecticalEq in fi.MEPModel.ConnectorManager.Connectors)
                                 {
                                     if (connectorElecticalEq.Domain == Domain.DomainHvac)
                                     {
@@ -335,13 +337,16 @@ namespace NGraph.Core
         static public List<MEPSystem> GetMEPSystems(Document doc, ElementId elementId, Domain domain)
         {
             List<MEPSystem> lMepSystem = new List<MEPSystem>();
-            foreach (var item in (doc.GetElement(elementId) as FamilyInstance).MEPModel.ConnectorManager.Connectors)
+            if (doc.GetElement(elementId) is not FamilyInstance instance || instance.MEPModel?.ConnectorManager is not ConnectorManager manager)
+                return lMepSystem;
+
+            foreach (Connector item in manager.Connectors)
             {
                 try
                 {
-                    if (((item as Connector).MEPSystem != null) & (item as Connector).Domain == domain)
+                    if (item.MEPSystem is MEPSystem system && item.Domain == domain)
                     {
-                        lMepSystem.Add((item as Connector).MEPSystem);
+                        lMepSystem.Add(system);
                     }
                 }
                 catch { continue; };
