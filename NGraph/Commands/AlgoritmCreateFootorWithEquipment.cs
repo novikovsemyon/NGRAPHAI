@@ -94,8 +94,8 @@ public class AlgoritmCreateFootorWithEquipment : ExternalCommand
                         fh.CableLog.ПерезаписьПараметров = fh.FI.LookupParameter(Const.Param_CJ_Reload).AsBool();
                         fh.CableLog.ОбозначениеКабеля = fh.Group +"/"+fh.Parameter_position_number_set;
                         fh.CableLog.Длина = fh.FI.LookupParameter(Const.Param_CJ_Lenght).AsInteger();
-                        fh.CableLog.НачалоОбозначение =eh.FamilyInstance.LookupParameter("ADSK_Позиция").AsString()+"-"+eh.index;
-                        fh.CableLog.НачалоОборудование = eh.FamilyInstance.LookupParameter("ADSK_Наименование").AsString();
+                        fh.CableLog.НачалоОбозначение = (eh.FamilyInstance?.LookupParameter("ADSK_Позиция")?.AsString() ?? string.Empty)+"-"+eh.index;
+                        fh.CableLog.НачалоОборудование = eh.FamilyInstance?.LookupParameter("ADSK_Наименование")?.AsString() ?? string.Empty;
                         fh.CableLog.КонецОбозначение = "ЩА-"+eh.Param_NS_Equpment;
                         fh.CableLog.КонецОборудование = "Щит автоматизации";
                         //fh.CableLog.Трасса = eh.FamilyInstance.LookupParameter("CJ_Трасса").AsString();
@@ -114,7 +114,7 @@ public class AlgoritmCreateFootorWithEquipment : ExternalCommand
             {
                 foreach (var eh in elementHeaders)
                 {
-                    eh.FamilyInstance.LookupParameter(Const.Param_NS_PanelName).Set(eh.index.ToString());
+                    eh.FamilyInstance?.LookupParameter(Const.Param_NS_PanelName)?.Set(eh.index.ToString());
                     foreach (var fh in eh.fSAheadersEQ)
                     {
                         fh.FI.LookupParameter(Const.Param_CJ_Number).Set(fh.CableLog.ОбозначениеКабеля);

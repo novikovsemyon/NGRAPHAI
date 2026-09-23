@@ -11,15 +11,6 @@ internal static class RevitElementAccess
         throw new InvalidOperationException($"У элемента {element.Id} «{element.Name}» нет точки размещения.");
     }
 
-    public static long GetNumericValue(this ElementId id)
-    {
-#if REVIT2024_OR_GREATER
-        return id.Value;
-#else
-        return id.IntegerValue;
-#endif
-    }
-
     public static ElementId CreateId(long value)
     {
 #if REVIT2024_OR_GREATER

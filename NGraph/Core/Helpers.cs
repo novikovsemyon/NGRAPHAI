@@ -272,8 +272,6 @@ namespace NGraph.Core
         {
             var ducts = (mepsystem as MechanicalSystem
                 ?? throw new ArgumentException("Требуется механическая система.", nameof(mepsystem))).DuctNetwork.OfType<Duct>();
-            //var faminst = (mepsystem as MechanicalSystem
-                ?? throw new ArgumentException("Требуется механическая система.", nameof(mepsystem))).DuctNetwork.OfType<FamilyInstance>();
 
             var collector = new FilteredElementCollector(_doc);
             var listofelements = collector.OfCategory(builtInCategory).WhereElementIsNotElementType().OfType<FamilyInstance>().ToList();
