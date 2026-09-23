@@ -1,97 +1,23 @@
-<?xml version="1.0" ?>
-<Window xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" x:Class="NGraph.Views.NGraphView" Style="{DynamicResource {x:Type Window}}" WindowStartupLocation="CenterOwner" Title="NGraph — Справка" Width="900" Height="680" MinWidth="730" MinHeight="520" PreviewKeyDown="Window_PreviewKeyDown">
-
-    <Grid Margin="24">
-        <Grid.RowDefinitions>
-            <RowDefinition Height="Auto"/>
-            <RowDefinition Height="*"/>
-            <RowDefinition Height="Auto"/>
-        </Grid.RowDefinitions>
-        <StackPanel Margin="0,0,0,20">
-            <TextBlock Text="Справка NGraph" FontSize="28" FontWeight="SemiBold"/>
-            <TextBlock Text="Схемы автоматизации · оборудование · листы" Foreground="#52627A" Margin="0,6,0,0"/>
-        </StackPanel>
-        <TabControl Grid.Row="1">
-            <TabItem Header="Начало работы">
-                <ScrollViewer VerticalScrollBarVisibility="Auto">
-                    <StackPanel Margin="22">
-                        <TextBlock Style="{StaticResource Heading}" Text="1. Подготовьте проект"/>
-                        <TextBlock Style="{StaticResource Body}" Text="Откройте проект Revit с семействами и чертёжными видами базы данных. В «Настройках» выберите виды баз элементов, функциональных схем и оборудования. Кнопка «Проверить виды» проверяет их наличие в открытом проекте."/>
-                        <TextBlock Style="{StaticResource Heading}" Text="2. Выберите рабочую команду"/>
-                        <TextBlock Style="{StaticResource Body}" Text="Для работы со схемами откройте соответствующий чертёжный вид. Для нумерации заранее выделите листы в диспетчере проекта. Команды построения используют семейства и параметры вашей базы."/>
-                        <TextBlock Style="{StaticResource Heading}" Text="3. Проверьте результат"/>
-                        <TextBlock Style="{StaticResource Body}" Text="После построения проверьте состав схемы, обозначения оборудования и кабельные связи. Сохраните проект после проверки."/>
-                    </StackPanel>
-                </ScrollViewer>
-            </TabItem>
-            <TabItem Header="Команды">
-                <ScrollViewer VerticalScrollBarVisibility="Auto">
-                    <StackPanel Margin="22">
-                        <TextBlock Style="{StaticResource Heading}" Text="Нумератор листов"/>
-                        <TextBlock Style="{StaticResource Body}" Text="Выделите листы в диспетчере проекта, запустите команду и выберите текстовый или целочисленный параметр. Задайте положительный начальный номер. Листы сортируются по существующему номеру; элементы других категорий пропускаются."/>
-                        <TextBlock Style="{StaticResource Heading}" Text="Найти в модели"/>
-                        <TextBlock Style="{StaticResource Body}" Text="Выберите элементы узлов рамкой. Команда читает NS_ElementId и выделяет существующие элементы модели. Пустые, неверные и устаревшие ссылки пропускаются; ESC отменяет выбор рамкой."/>
-                        <TextBlock Style="{StaticResource Heading}" Text="Копировать кабель"/>
-                        <TextBlock Style="{StaticResource Body}" Text="Выберите два чертёжных вида в диспетчере проекта. Копируются линии со стилем, содержащим *NG*, с сохранением стиля и закрепления. Источник и назначение определяются порядком видов, возвращаемым Revit. При ошибке операция откатывается целиком."/>
-                        <TextBlock Style="{StaticResource Heading}" Text="Соответствия INI"/>
-                        <TextBlock Style="{StaticResource Body}" Text="На вкладке «Файлы» настроек укажите папку. Имя файла должно совпадать с ADSK_Группирование, имя секции — с ADSK_Позиция. Значение Symbol задаёт имя типа графического обозначения."/>
-                        <TextBlock Style="{StaticResource Heading}" Text="База данных и база элементов"/>
-                        <TextBlock Style="{StaticResource Body}" Text="Выберите группу или найдите вариант по имени, группе и коду. «База данных» создаёт новый чертёжный вид; «База элементов» вставляет выбранный вариант на текущий чертёжный вид по указанной точке. Обозначение установки необязательно: пустое поле сохраняет значения из базы. Построение футора включается отдельным флагом."/>
-                        <TextBlock Style="{StaticResource Heading}" Text="Параметры каталогов"/>
-                        <TextBlock Style="{StaticResource Body}" Text="В «Настройки → Параметры» выберите тип цветовой области и параметры наименования, группы и кода. Списки содержат параметры областей текущего проекта. Для другой базы можно ввести имя вручную. Здесь же выбираются типы оборудования и сигнальных точек."/>
-                    </StackPanel>
-                </ScrollViewer>
-            </TabItem>
-            <TabItem Header="ХОВС">
-                <ScrollViewer VerticalScrollBarVisibility="Auto">
-                    <StackPanel Margin="22">
-                        <TextBlock Style="{StaticResource Heading}" Text="Объекты и ревизии"/>
-                        <TextBlock Style="{StaticResource Body}" Text="Откройте «ХОВС → Объекты и анализ ХОВС», создайте объект и импортируйте XLSX. Для нового формата выберите лист, строки заголовка и назначение колонок. После проверки установок сохраните ревизию: она содержит результаты и копию XLSX. Предыдущие ревизии сохраняются."/>
-                        <TextBlock Style="{StaticResource Heading}" Text="Проверка анализа"/>
-                        <TextBlock Style="{StaticResource Body}" Text="Выберите установку, чтобы увидеть исходные ячейки и основания распознавания. Исправьте тип и состав. Без положительного расхода L установка не подтверждается. Снимите флаг «Включить» у исключаемых строк. Пересчёт связей показывает кандидатов, которые необходимо проверить."/>
-                        <TextBlock Style="{StaticResource Heading}" Text="Обучение на исправлениях"/>
-                        <TextBlock Style="{StaticResource Body}" Text="Измените нужные поля, выделите проверенные строки и нажмите «Обучить на исправлениях». Обучение сохраняет только изменённые непустые значения; отсутствие компонента укажите словом «нет». Примеры применяются при следующем анализе. Обычное сохранение ревизии не запускает обучение."/>
-                        <TextBlock Style="{StaticResource Heading}" Text="Хранение и перенос"/>
-                        <TextBlock Style="{StaticResource Body}" Text="Папка базы задаётся в «Настройки → Файлы». Объекты, ревизии, копии XLSX и обучающие примеры хранятся локально, отдельно от RVT. Для переноса закройте окна, скопируйте всю папку и выберите её на другом компьютере."/>
-                    </StackPanel>
-                </ScrollViewer>
-            </TabItem>
-            <TabItem Header="Решение проблем">
-                <ScrollViewer VerticalScrollBarVisibility="Auto">
-                    <StackPanel Margin="22">
-                        <TextBlock Style="{StaticResource Heading}" Text="База данных не найдена"/>
-                        <TextBlock Style="{StaticResource Body}" Text="Откройте «Настройки → Базы данных» и нажмите «Проверить виды». Убедитесь, что имена совпадают полностью и в проекте есть соответствующие чертёжные виды. Сохранённые имена общие для проектов пользователя."/>
-                        <TextBlock Style="{StaticResource Heading}" Text="Нет параметра для нумерации"/>
-                        <TextBlock Style="{StaticResource Body}" Text="Проверьте, что выбраны листы. В списке доступны записываемые текстовые и целочисленные параметры этих листов. Добавьте необходимый параметр в проект или выберите другой."/>
-                        <TextBlock Style="{StaticResource Heading}" Text="Элемент не находится в модели"/>
-                        <TextBlock Style="{StaticResource Body}" Text="Проверьте значение NS_ElementId у выбранного элемента узла. Связанный элемент модели мог быть удалён. Проверьте соответствие схемы текущему проекту."/>
-                        <TextBlock Style="{StaticResource Heading}" Text="Не сохраняются настройки"/>
-                        <TextBlock Style="{StaticResource Body}" Text="Проверьте путь к папке INI и права записи в файл настроек. Сообщение внизу окна содержит причину ошибки. «По умолчанию» меняет значения только в окне; для применения нажмите «Сохранить»."/>
-                    </StackPanel>
-                </ScrollViewer>
-            </TabItem>
-            <TabItem Header="О программе">
-                <ScrollViewer VerticalScrollBarVisibility="Auto">
-                    <StackPanel Margin="22">
-                        <TextBlock Style="{StaticResource Heading}" Text="NGraph для Autodesk Revit"/>
-                        <TextBlock Style="{StaticResource Body}" Text="Инструменты для построения схем автоматизации и оформления проектной документации. Сборки для Revit 2021–2027."/>
-                        <TextBlock x:Name="VersionText" Style="{StaticResource Body}"/>
-                        <TextBlock Style="{StaticResource Heading}" Text="Материалы и поддержка"/>
-                        <TextBlock Margin="0,0,0,14">
-                            <Hyperlink NavigateUri="https://shsystems.ru" RequestNavigate="Link_RequestNavigate">Shsystems.ru — инструкции и материалы</Hyperlink>
-                        </TextBlock>
-                        <TextBlock Margin="0,0,0,14">
-                            <Hyperlink NavigateUri="https://beta-bim.com/" RequestNavigate="Link_RequestNavigate">Beta-Bim.com — решения для проектирования</Hyperlink>
-                        </TextBlock>
-                        <TextBlock Margin="0,0,0,20">
-                            <Hyperlink NavigateUri="https://github.com/novikovsemyon/NGRAPHAI" RequestNavigate="Link_RequestNavigate">Исходный код на GitHub</Hyperlink>
-                        </TextBlock>
-                        <Button Content="Копировать сведения о версии" HorizontalAlignment="Left" Click="Copy_Click"/>
-                        <TextBlock x:Name="Status" TextWrapping="Wrap" Margin="0,12,0,0" AutomationProperties.LiveSetting="Polite"/>
-                    </StackPanel>
-                </ScrollViewer>
-            </TabItem>
-        </TabControl>
-        <Button Grid.Row="2" Content="Закрыть" HorizontalAlignment="Right" Margin="0,16,0,0" Click="Close_Click"/>
-    </Grid>
+<Window x:Class="NGraph.Views.NGraphView" xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" Title="NGraph — Справка" Width="1020" Height="720" MinWidth="760" MinHeight="520" FontSize="13" Icon="/NGraph;component/Resources/Icons/NG_info_32.png">
+  <Window.Resources><ResourceDictionary><ResourceDictionary.MergedDictionaries><ResourceDictionary Source="CompactDialogStyles.xaml"/></ResourceDictionary.MergedDictionaries></ResourceDictionary></Window.Resources>
+  <Grid Margin="16"><Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
+    <DockPanel Margin="0,0,0,10"><Button DockPanel.Dock="Right" Content="Открыть PDF" Click="Pdf_Click"/><StackPanel><TextBlock Text="Справка NGraph" Style="{StaticResource Heading}"/><TextBlock x:Name="HeaderVersion" Foreground="#52627A"/></StackPanel></DockPanel>
+    <TabControl Grid.Row="1"><TabItem Header="Команды и инструкции"><Grid Margin="8"><Grid.ColumnDefinitions><ColumnDefinition Width="250" MinWidth="190"/><ColumnDefinition Width="7"/><ColumnDefinition/></Grid.ColumnDefinitions>
+      <DockPanel><TextBox DockPanel.Dock="Top" x:Name="Search" Margin="0,0,0,8" TextChanged="Search_Changed" ToolTip="Поиск по названию и тексту инструкции" AutomationProperties.Name="Поиск в справке"/>
+        <ListBox x:Name="Topics" SelectionChanged="Topic_Changed" ScrollViewer.HorizontalScrollBarVisibility="Disabled"><ListBox.ItemTemplate><DataTemplate><StackPanel><TextBlock Text="{Binding Title}" TextWrapping="Wrap"/><TextBlock Text="{Binding Group}" FontSize="11" Foreground="#52627A"/></StackPanel></DataTemplate></ListBox.ItemTemplate></ListBox>
+      </DockPanel>
+      <GridSplitter Grid.Column="1" Width="5" HorizontalAlignment="Center" Background="#D5DDE9"/>
+      <FlowDocumentScrollViewer Grid.Column="2" x:Name="Article" IsToolBarVisible="False" VerticalScrollBarVisibility="Auto"/>
+    </Grid></TabItem>
+    <TabItem Header="О программе"><ScrollViewer VerticalScrollBarVisibility="Auto"><StackPanel Margin="16">
+      <TextBlock Text="NGraph для Autodesk Revit" Style="{StaticResource Heading}"/><TextBlock Style="{StaticResource Body}" Text="Схемы автоматизации, структурные схемы, оформление листов и анализ ХОВС. Сборки для Revit 2021–2027."/>
+      <TextBlock x:Name="VersionText" Style="{StaticResource Body}"/>
+      <TextBlock x:Name="BuildText" TextWrapping="Wrap" Foreground="#52627A" Margin="0,0,0,12"/>
+      <Button Content="Скопировать сведения" Click="Copy_Click" HorizontalAlignment="Left" Margin="0,0,0,16"/>
+      <TextBlock Text="Материалы и поддержка" Style="{StaticResource Heading}"/>
+      <TextBlock Margin="0,0,0,12"><Hyperlink NavigateUri="https://shsystems.ru" RequestNavigate="Link_RequestNavigate">Shsystems.ru — инструкции и материалы</Hyperlink></TextBlock>
+      <TextBlock><Hyperlink NavigateUri="https://beta-bim.com/" RequestNavigate="Link_RequestNavigate">Beta-Bim.com — решения для проектирования</Hyperlink></TextBlock>
+    </StackPanel></ScrollViewer></TabItem></TabControl>
+    <DockPanel Grid.Row="2" Margin="0,10,0,0"><Button DockPanel.Dock="Right" Content="Закрыть" Click="Close_Click"/><TextBlock x:Name="Status" TextWrapping="Wrap" VerticalAlignment="Center"/></DockPanel>
+  </Grid>
 </Window>

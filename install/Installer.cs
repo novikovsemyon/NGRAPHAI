@@ -1,4 +1,4 @@
-﻿using Installer;
+using Installer;
 using WixSharp;
 using WixSharp.CommonTasks;
 using WixSharp.Controls;
@@ -12,6 +12,8 @@ var project = new Project
     OutDir = "output",
     Name = projectName,
     Platform = Platform.x64,
+    Language = "ru-RU",
+    Codepage = "1251",
     UI = WUI.WixUI_FeatureTree,
     MajorUpgrade = MajorUpgrade.Default,
     GUID = new Guid("BCCD7741-2EE9-4D60-A4C4-4F1762E382C9"),
@@ -37,7 +39,8 @@ void BuildSingleUserMsi()
     project.OutFileName = $"{outputName}-{project.Version}-SingleUser";
     project.Dirs =
     [
-        new InstallDir(@"%AppDataFolder%\Autodesk\Revit\Addins\", wixEntities)
+        new InstallDir(@"%AppDataFolder%\Autodesk\Revit\Addins\", wixEntities),
+        Generator.SettingsDirectory()
     ];
     project.BuildMsi();
 }

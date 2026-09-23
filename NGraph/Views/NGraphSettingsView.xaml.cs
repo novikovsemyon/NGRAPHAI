@@ -1,4 +1,5 @@
 using System.IO;
+using System.Diagnostics;
 using System.Windows;
 using System.Windows.Input;
 using Microsoft.Win32;
@@ -20,7 +21,7 @@ public sealed partial class NGraphSettingsView
         _viewNames = new FilteredElementCollector(viewModel.Doc)
             .OfClass(typeof(ViewDrafting)).Cast<ViewDrafting>()
             .Where(view => !view.IsTemplate).Select(view => view.Name).OrderBy(name => name).ToList();
-        ElementsView.ItemsSource = FsaView.ItemsSource = EquipmentView.ItemsSource = _viewNames;
+        ElementsView.ItemsSource = FsaView.ItemsSource = _viewNames;
         ProjectName.Text = "Проект: " + viewModel.Doc.Title;
         SettingsPath.Text = UserSettings.FilePath;
         // Обходим только области и типоразмеры: параметры каталога не требуют сканирования всей модели.
@@ -48,15 +49,14 @@ public sealed partial class NGraphSettingsView
         HovsFolder.Text = settings.HovsFolder;
         ElementsView.Text = settings.ElementsView;
         FsaView.Text = settings.FsaView;
-        EquipmentView.Text = settings.EquipmentView;
         IniDirectory.Text = settings.IniDirectory;
     }
 
     private void Check_Click(object sender, RoutedEventArgs e)
     {
-        var missing = new[] { ElementsView.Text, FsaView.Text, EquipmentView.Text }
+        var missing = new[] { ElementsView.Text, FsaView.Text }
             .Select(name => name.Trim()).Where(name => !_viewNames.Contains(name)).ToList();
-        Status.Text = missing.Count == 0 ? "Все три вида найдены в текущем проекте." :
+        Status.Text = missing.Count == 0 ? "Оба вида найдены в текущем проекте." :
             "Не найдены виды: " + string.Join("; ", missing) + ". Можно сохранить имена для другого проекта.";
     }
 
@@ -66,10 +66,22 @@ public sealed partial class NGraphSettingsView
         if (dialog.ShowDialog(this) == true) IniDirectory.Text = Path.GetDirectoryName(dialog.FileName);
     }
 
+    private void OpenFolder_Click(object sender, RoutedEventArgs e)
+    {
+        try
+        {
+            var path = IniDirectory.Text.Trim();
+            if (string.Equals(path, DefaultSettings.DirectoryPath, StringComparison.OrdinalIgnoreCase)) DefaultSettings.EnsureInstalled();
+            if (!Path.IsPathRooted(path) || !Directory.Exists(path)) throw new IOException("Папка INI не найдена. Проверьте путь.");
+            Process.Start(new ProcessStartInfo(path) { UseShellExecute = true });
+        }
+        catch (Exception ex) { Status.Text = "Не удалось открыть папку. " + ex.Message; }
+    }
+
     private void Save_Click(object sender, RoutedEventArgs e)
     {
         var settings = new UserSettings { ElementsView = ElementsView.Text.Trim(), FsaView = FsaView.Text.Trim(),
-            EquipmentView = EquipmentView.Text.Trim(), IniDirectory = IniDirectory.Text.Trim() };
+            IniDirectory = IniDirectory.Text.Trim() };
         settings.RegionType = RegionType.Text.Trim();
         settings.RegionNameParameter = RegionNameParameter.Text.Trim();
         settings.RegionGroupParameter = RegionGroupParameter.Text.Trim();
@@ -78,7 +90,7 @@ public sealed partial class NGraphSettingsView
         settings.SignalType = SignalType.Text.Trim();
         settings.SignalWithoutTagType = SignalWithoutTagType.Text.Trim();
         settings.HovsFolder = HovsFolder.Text.Trim();
-        if (new[] { settings.ElementsView, settings.FsaView, settings.EquipmentView, settings.RegionType, settings.RegionNameParameter, settings.RegionGroupParameter, settings.RegionCodeParameter, settings.EquipmentType, settings.SignalType, settings.SignalWithoutTagType }.Any(string.IsNullOrWhiteSpace))
+        if (new[] { settings.ElementsView, settings.FsaView, settings.RegionType, settings.RegionNameParameter, settings.RegionGroupParameter, settings.RegionCodeParameter, settings.EquipmentType, settings.SignalType, settings.SignalWithoutTagType }.Any(string.IsNullOrWhiteSpace))
         {
             Status.Text = "Заполните имена видов, параметров и типов базы данных.";
             return;
@@ -91,6 +103,7 @@ public sealed partial class NGraphSettingsView
                 throw new IOException("Папка INI не найдена. Проверьте путь.");
             if (!Path.IsPathRooted(settings.HovsFolder)) throw new IOException("Укажите полный путь к базе ХОВС.");
             Directory.CreateDirectory(settings.HovsFolder);
+            DefaultSettings.EnsureInstalled();
             settings.Save();
             DialogResult = true;
         }

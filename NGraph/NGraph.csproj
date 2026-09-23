@@ -112,6 +112,13 @@
     </ItemGroup>
 
     <ItemGroup>
+        <Content Include="Resources/Defaults/Settings/*.ini" Link="Defaults/Settings/%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
+        <Resource Include="Resources/Icons/NG_hovs_16.png" />
+        <Resource Include="Resources/Icons/NG_hovs_32.png" />
+        <EmbeddedResource Include="Resources/Help/Commands.xml" LogicalName="NGraph.Help.Commands.xml" />
+        <EmbeddedResource Include="Resources/Help/NGraph_User_Guide.pdf" LogicalName="NGraph.Help.UserGuide.pdf" />
+    </ItemGroup>
+    <ItemGroup>
         <Folder Include="Models"/>
     </ItemGroup>
 

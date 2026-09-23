@@ -2,11 +2,12 @@
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         Title="NGraph — Структура ХОВС"
-        Height="780" Width="1180"
-        MinHeight="650" MinWidth="940"
+        Height="720" Width="1120" FontSize="13" Icon="/NGraph;component/Resources/Icons/NG_hovs_32.png"
+        MinHeight="550" MinWidth="900"
         WindowStartupLocation="CenterOwner"
         ResizeMode="CanResize">
-    <Grid Margin="24">
+    <Window.Resources><ResourceDictionary><ResourceDictionary.MergedDictionaries><ResourceDictionary Source="/NGraph;component/Views/CompactDialogStyles.xaml"/></ResourceDictionary.MergedDictionaries></ResourceDictionary></Window.Resources>
+    <Grid Margin="12">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="Auto"/>

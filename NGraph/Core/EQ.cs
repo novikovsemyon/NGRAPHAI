@@ -117,9 +117,9 @@ public class EQ
         public void EQipment(EQ eQs, bool fromIni)
         {
 
-            var mydocumentsPath = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments);
-            //string locationAddin = Document.Application.CurrentUserAddinsLocation;
-            string[] allFoundFiles = Directory.GetFiles(@$"{mydocumentsPath}\REVIT\BETA-BIM\Настройки\", "*.ini", SearchOption.AllDirectories);
+            var settingsDirectory = UserSettings.Load().IniDirectory;
+            if (!Directory.Exists(settingsDirectory)) throw new DirectoryNotFoundException("Папка INI не найдена. Проверьте «Настройки → Файлы»: " + settingsDirectory);
+            string[] allFoundFiles = Directory.GetFiles(settingsDirectory, "*.ini", SearchOption.AllDirectories);
 
             //Имя файла - ADSK_Группирование
             //aSection [ADSK_Позиция]

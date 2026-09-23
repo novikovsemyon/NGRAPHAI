@@ -13,6 +13,12 @@ public class Application : ExternalApplication
     public override void OnStartup()
     {
         CreateRibbon();
+        try { Core.DefaultSettings.EnsureInstalled(); }
+        catch (Exception ex) when (ex is System.IO.IOException || ex is UnauthorizedAccessException || ex is ArgumentException)
+        {
+            // Ошибка копирования INI не должна скрывать ленту и остальные команды.
+            TaskDialog.Show("NGraph — настройки INI", "Не удалось подготовить папку настроек. " + ex.Message);
+        }
 
 
     }
@@ -137,8 +143,8 @@ public class Application : ExternalApplication
         // Панели располагаются в порядке создания; справка и настройки — справа.
         var hovs = Application.CreateRibbonPanel(nGraph, "ХОВС");
         var analyzer = hovs.AddPushButton<HovsWorkspaceCommand>("Объекты и\nанализ ХОВС");
-        analyzer.SetImage("/NGraph;component/Resources/Icons/NG_structura_16.png");
-        analyzer.SetLargeImage("/NGraph;component/Resources/Icons/NG_structura_32.png");
+        analyzer.SetImage("/NGraph;component/Resources/Icons/NG_hovs_16.png");
+        analyzer.SetLargeImage("/NGraph;component/Resources/Icons/NG_hovs_32.png");
         analyzer.LongDescription = "Импорт XLSX, разметка колонок, ревизии и локальное обучение на исправлениях.";
         #region Общее
         var panelCom = Application.CreateRibbonPanel(nGraph, "Общее");

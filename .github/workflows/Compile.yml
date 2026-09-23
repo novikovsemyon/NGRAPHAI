@@ -30,10 +30,24 @@ jobs:
       - name: Test HOVS import and storage
         run: dotnet run --project tests/NGraph.Hovs.Tests -c Release
 
+      - name: Test WPF windows and bundled help
+        run: dotnet run --project tests/NGraph.UI.Tests -c Release
+
       - name: Compile solution
-        run: dotnet run -c Release
+        run: dotnet run -c Release -- pack
         working-directory: "build"
         env:
           # PR builds validate the synthetic merge; release numbering is resolved only for real branches.
           Build__Version: ${{ github.event_name == 'pull_request' && format('0.0.0-pr.{0}', github.event.number) || '' }}
           DOTNET_ENVIRONMENT: ${{ github.ref_name == github.event.repository.default_branch && 'Production' || 'Development' }}
+
+      - name: Check packaged INI defaults
+        shell: pwsh
+        run: ./tools/check_installer.ps1
+
+      - name: Upload installers
+        uses: actions/upload-artifact@v4
+        with:
+          name: NGraph-installers
+          path: output/*.msi
+          if-no-files-found: error
