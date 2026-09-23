@@ -12,9 +12,6 @@ public class ElementHeader: IComparable<ElementHeader>
     /// <summary>
     /// Список пересекающихся точек
     /// </summary>
-    /// <summary>
-    /// Список пересекающихся точек
-    /// </summary>
     public List<FSAheader> fSAheaders { get; set; } = [];
     
     /// <summary>
@@ -35,14 +32,14 @@ public class ElementHeader: IComparable<ElementHeader>
     public ElementHeader(FamilyInstance familyInstance, View v, List<FSAheader> FSAheaders)
     {
         FamilyInstance = familyInstance;
+        Param_NS_GOST = familyInstance.LookupParameter(Const.Param_NS_GOST)?.AsString() ?? string.Empty;
+        Param_NS_Equpment = familyInstance.LookupParameter(Const.Param_NS_Equpment)?.AsString() ?? string.Empty;
         foreach (var fh in FSAheaders)
         {
             if (IsCrossingElement_withHimself(familyInstance, fh.FI, v))
             {
                 fSAheadersEQ.Add(fh);
                 fh.ElementHeader = this;
-                Param_NS_GOST = familyInstance.LookupParameter(Const.Param_NS_GOST).AsString();
-                Param_NS_Equpment = familyInstance.LookupParameter(Const.Param_NS_Equpment).AsString();
 
             }
             

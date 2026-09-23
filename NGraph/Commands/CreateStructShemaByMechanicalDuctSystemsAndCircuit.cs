@@ -130,7 +130,8 @@ public class CreateStructShemaByMechanicalDuctSystemsAndCircuit : ExternalComman
                     ///Переделать!!!!!!!!!!!!
                     foreach (var eq in circuitId.VerticesFromBaseEquipment)
                     {
-                        listEQ.Add(eq.eQ);
+                        if (eq.eQ is EQ equipment)
+                            listEQ.Add(equipment);
                     }
                     circuitId.EQFromBaseEquipment = listEQ;
                     ///переделать !!!!!!!!!!!!! 

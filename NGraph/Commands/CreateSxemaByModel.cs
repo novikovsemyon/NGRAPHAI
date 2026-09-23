@@ -416,6 +416,12 @@ var groupBySpace = e.GroupBy(i => i.Space?.Id ?? ElementId.InvalidElementId);
                     { foreach (var l in i.Levels) { rs.AddRange(l.RoomSpaces); } }
                     return rs;
                 }
+                static List<LevelOfSection> GetLevels(List<Section> sections)
+                {
+                    List<LevelOfSection> levels = [];
+                    foreach (var i in sections) { levels.AddRange(i.Levels); }
+                    return levels;
+                }
 
             }
         

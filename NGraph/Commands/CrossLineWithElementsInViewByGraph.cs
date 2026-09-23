@@ -322,14 +322,6 @@ public class CrossLineWithElementsInViewByGraph : ExternalCommand
             return vertexId;
         }
         
-        bool HaveEndPoint(Curve curve, VertexId v)
-        {
-            if (curve.Tessellate().ToList().Any(i => HaveSameXyz(i, v.Xyz, 1)))
-            {
-                return true;
-            }
-            else return false;
-        }
 
         
         bool HaveSameXyz(XYZ xyz1, XYZ xyz2, int roundMm)
@@ -430,18 +422,9 @@ public class CrossLineWithElementsInViewByGraph : ExternalCommand
                 var Projection = BigSegment.Curve.Project(element.GetPlacementPoint())
                     ?? throw new InvalidOperationException($"Не удалось спроецировать элемент {element.Id} на линию.");
 
-                {
-                    // Координаты точки проекции на линии
-                    ProjectedPoint = Projection.XYZPoint;
-
-                    // Расстояние от исходной точки до линии в мм.
-                    Helpers helpers = new Helpers();
-                    Distance = helpers.FeetToMillimeters(Projection.Distance);
-
-                    // Параметр точки на кривой
-                    //double parameter = Projection.Parameter;
-
-                }
+                // Координаты точки проекции на линии и расстояние до неё в мм.
+                ProjectedPoint = Projection.XYZPoint;
+                Distance = Projection.Distance.ToMillimeters();
 
             }
 

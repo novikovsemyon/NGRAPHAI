@@ -20,7 +20,7 @@ namespace NGraph.Core
         /// <summary>
         /// Revit for DuctSystems (fore project has more than one duct system)
         /// </summary>
-        public MEPSystem? MEPSystem { get; private set; }
+        public static MEPSystem? MEPSystem { get; private set; }
         /// <summary>
         /// Construction graph
         /// </summary>
@@ -909,6 +909,5 @@ namespace NGraph.Core
     }
 
 }
-
 
 

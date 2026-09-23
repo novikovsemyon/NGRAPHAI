@@ -226,7 +226,6 @@ namespace NGraph.Commands;
         void CreateMetkaByCenterEdgeId(ViewDrafting activeViewDrafting, EdgeId needEdge, FamilyInstance fi)
         {
             //для маркировки
-            TagMode tagMode = TagMode.TM_ADDBY_CATEGORY;
             TagOrientation tagorn = TagOrientation.Horizontal;
             var symId = new FilteredElementCollector(Application.ActiveUIDocument.Document).
                 OfCategory(BuiltInCategory.OST_DetailComponentTags).
