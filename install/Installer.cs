@@ -42,7 +42,7 @@ void BuildSingleUserMsi()
         new InstallDir(@"%AppDataFolder%\Autodesk\Revit\Addins\", wixEntities),
         Generator.SettingsDirectory()
     ];
-    project.BuildMsi();
+    BuildAndVerify();
 }
 
 void BuildMultiUserUserMsi()
@@ -53,5 +53,12 @@ void BuildMultiUserUserMsi()
     [
         new InstallDir(@"%CommonAppDataFolder%\Autodesk\Revit\Addins\", wixEntities)
     ];
-    project.BuildMsi();
+    BuildAndVerify();
+}
+// WixSharp can return without an exception after a native compiler error. Never report a missing MSI as success.
+void BuildAndVerify()
+{
+    var file = project.BuildMsi();
+    if (string.IsNullOrWhiteSpace(file) || !System.IO.File.Exists(file))
+        throw new InvalidOperationException("MSI was not created. Review the WiX compiler output.");
 }

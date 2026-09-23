@@ -1,4 +1,4 @@
-﻿using ModularPipelines.Attributes;
+using ModularPipelines.Attributes;
 using ModularPipelines.Context;
 using ModularPipelines.DotNet.Extensions;
 using ModularPipelines.DotNet.Options;
@@ -82,10 +82,15 @@ public sealed class CreateInstallerModule : Module<CommandResult>
                 "tool",
                 "install",
                 "--tool-path", wixToolFolder.Path,
-                "wix"
+                "wix", "--version", "5.0.2", "--allow-roll-forward"
             ]
         }, cancellationToken);
 
+        // Tool and UI extension must use the same fixed version; a future WiX release must not change the build.
+        await context.Command.ExecuteCommandLineTool(new CommandLineToolOptions(System.IO.Path.Combine(wixToolFolder.Path, "wix.exe"))
+        {
+            Arguments = ["extension", "add", "-g", "WixToolset.UI.wixext/5.0.2"]
+        }, cancellationToken);
         return wixToolFolder;
     }
 }
