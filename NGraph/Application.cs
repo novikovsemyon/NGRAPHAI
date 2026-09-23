@@ -17,7 +17,7 @@ public class Application : ExternalApplication
         catch (Exception ex) when (ex is System.IO.IOException || ex is UnauthorizedAccessException || ex is ArgumentException)
         {
             // Ошибка копирования INI не должна скрывать ленту и остальные команды.
-            TaskDialog.Show("NGraph — настройки INI", "Не удалось подготовить папку настроек. " + ex.Message);
+            Autodesk.Revit.UI.TaskDialog.Show("NGraph — настройки INI", "Не удалось подготовить папку настроек. " + ex.Message);
         }
 
 

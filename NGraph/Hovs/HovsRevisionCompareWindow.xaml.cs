@@ -2,7 +2,7 @@ using System.ComponentModel;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
-using System.Windows.Data;
+using Binding = System.Windows.Data.Binding;
 using HOVS.Plugin;
 
 namespace NGraph.Views;
