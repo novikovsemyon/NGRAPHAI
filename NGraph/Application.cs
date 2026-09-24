@@ -76,6 +76,10 @@ public class Application : ExternalApplication
         var buttonCreateConnection = panelStruct.AddPushButton<CreateСonnectionsLineOnViewDrafting>("Расставить\nкабель");
         buttonCreateConnection.SetImage("/NGraph;component/Resources/Icons/NG_cabel_16.png");
         buttonCreateConnection.SetLargeImage("/NGraph;component/Resources/Icons/NG_cabel_32.png");
+        
+        var buttonCreateConnectionWithoutModelLengh = panelStruct.AddPushButton<CreateСonnectionsLineOnViewDrafting_NoLength>("Расставить\nкабель без модели \nи длины");
+        buttonCreateConnectionWithoutModelLengh.SetImage("/NGraph;component/Resources/Icons/NG_cabel_16.png");
+        buttonCreateConnectionWithoutModelLengh.SetLargeImage("/NGraph;component/Resources/Icons/NG_cabel_32.png");
 
         var buttonCutLines = panelStruct.AddPushButton<CutLineOnViewDrafting>("Вырезать\nлинии");
         buttonCutLines.SetImage("/NGraph;component/Resources/Icons/NG_cut_16.png");
