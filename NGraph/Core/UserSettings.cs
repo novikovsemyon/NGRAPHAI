@@ -8,9 +8,7 @@ public sealed class UserSettings
 {
     public string ElementsView { get; set; } = "!_000_NGraph_БАЗА_ЭЛЕМЕНТОВ";
     public string FsaView { get; set; } = "!_000_NGraph_БАЗА ДАННЫХ_ФСА";
-    public string EquipmentView { get; set; } = "!_000_NGraph_БАЗА_ОБОРУДОВАНИЯ";
-    public string IniDirectory { get; set; } = Path.Combine(
-        Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments), "REVIT", "BETA-BIM", "Настройки");
+    public string IniDirectory { get; set; } = DefaultSettings.DirectoryPath;
 
     public string RegionType { get; set; } = "BD_Готовое решение";
 
@@ -56,8 +54,8 @@ public sealed class UserSettings
             defaults.HovsFolder = Read(root, nameof(HovsFolder), defaults.HovsFolder);
             defaults.ElementsView = Read(root, nameof(ElementsView), defaults.ElementsView);
             defaults.FsaView = Read(root, nameof(FsaView), defaults.FsaView);
-            defaults.EquipmentView = Read(root, nameof(EquipmentView), defaults.EquipmentView);
-            defaults.IniDirectory = Read(root, nameof(IniDirectory), defaults.IniDirectory);
+            var ini = Read(root, nameof(IniDirectory), defaults.IniDirectory);
+            defaults.IniDirectory = DefaultSettings.IsLegacyPath(ini) ? DefaultSettings.DirectoryPath : ini;
         }
         catch (Exception ex) when (ex is IOException || ex is InvalidDataException || ex is UnauthorizedAccessException || ex is System.Xml.XmlException)
         {
@@ -91,7 +89,7 @@ public sealed class UserSettings
                 new XElement(nameof(SignalWithoutTagType), SignalWithoutTagType),
                 new XElement(nameof(HovsFolder), HovsFolder),
                 new XElement(nameof(ElementsView), ElementsView), new XElement(nameof(FsaView), FsaView),
-                new XElement(nameof(EquipmentView), EquipmentView), new XElement(nameof(IniDirectory), IniDirectory))).Save(temporary);
+                new XElement(nameof(IniDirectory), IniDirectory))).Save(temporary);
             if (File.Exists(filePath)) File.Replace(temporary, filePath, null);
             else File.Move(temporary, filePath);
         }

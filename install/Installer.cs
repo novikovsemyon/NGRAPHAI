@@ -1,4 +1,4 @@
-﻿using Installer;
+using Installer;
 using WixSharp;
 using WixSharp.CommonTasks;
 using WixSharp.Controls;
@@ -12,6 +12,8 @@ var project = new Project
     OutDir = "output",
     Name = projectName,
     Platform = Platform.x64,
+    Language = "ru-RU",
+    Codepage = "1251",
     UI = WUI.WixUI_FeatureTree,
     MajorUpgrade = MajorUpgrade.Default,
     GUID = new Guid("BCCD7741-2EE9-4D60-A4C4-4F1762E382C9"),
@@ -37,9 +39,10 @@ void BuildSingleUserMsi()
     project.OutFileName = $"{outputName}-{project.Version}-SingleUser";
     project.Dirs =
     [
-        new InstallDir(@"%AppDataFolder%\Autodesk\Revit\Addins\", wixEntities)
+        new InstallDir(@"%AppDataFolder%\Autodesk\Revit\Addins\", wixEntities),
+        Generator.SettingsDirectory()
     ];
-    project.BuildMsi();
+    BuildAndVerify();
 }
 
 void BuildMultiUserUserMsi()
@@ -50,5 +53,12 @@ void BuildMultiUserUserMsi()
     [
         new InstallDir(@"%CommonAppDataFolder%\Autodesk\Revit\Addins\", wixEntities)
     ];
-    project.BuildMsi();
+    BuildAndVerify();
+}
+// WixSharp can return without an exception after a native compiler error. Never report a missing MSI as success.
+void BuildAndVerify()
+{
+    var file = project.BuildMsi();
+    if (string.IsNullOrWhiteSpace(file) || !System.IO.File.Exists(file))
+        throw new InvalidOperationException("MSI was not created. Review the WiX compiler output.");
 }

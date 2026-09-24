@@ -19,35 +19,7 @@ public class AlgoritmCreateSpecification : ExternalCommand
 
     public override void Execute()
     {
-        // Читаем настройки при запуске: сохранённое имя действует без перезапуска Revit.
-        string nameOfBdViewDrafting = NGraph.Core.UserSettings.Load().EquipmentView;
-        var helper = new Helpers();
-        var view = helper.AllElementsOfCategory(Application.ActiveUIDocument.Document, BuiltInCategory.OST_Views)
-            .FirstOrDefault(x => x.Name == nameOfBdViewDrafting);
-
-
-
-
-
-        if (view == null)
-        {
-            TaskDialog.Show("Внимание", "Отсутствует чертежный вид с именем " + nameOfBdViewDrafting);
-            return;
-        }
-        /*
-        var elements = Document.CollectElements(view.Id);
-
-        var specifications = elements.ToList().Where(x => x.GetType() == typeof(AnnotationSymbol)).ToList()
-            .Where(i => NgContext._FindParameter(i,"Тип")!.AsValueString().Contains("Спецификация_short")).ToList();
-        List < Element > sections = [];
-        foreach (var an in specifications)
-        {
-            sections.Add(an as AnnotationSymbol ?? throw new InvalidOperationException());
-        }
-*/
-
-        //
-
+        // Спецификация формируется по активному виду; отдельная база оборудования не нужна.
         var greenPoints = Application.ActiveUIDocument.Document.CollectElements(Application.ActiveUIDocument.ActiveView.Id).ToList().Where(x => x.GetType() == typeof(FamilyInstance))
             .ToList()
             .Where(i => NgContext._FindParameter(i, "Тип")!.AsValueString().Contains("FAS_точка")).ToList();

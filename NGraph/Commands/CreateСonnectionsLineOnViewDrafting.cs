@@ -19,6 +19,7 @@ namespace NGraph.Commands;
     [Transaction(TransactionMode.Manual)]
     public class CreateСonnectionsLineOnViewDrafting : ExternalCommand
     {
+        private int _roundCableMillimeters = 5000;
         public override void Execute()
         {
             Helpers helpers = new Helpers();
@@ -32,6 +33,9 @@ namespace NGraph.Commands;
             }
             #endregion
             
+            try { _roundCableMillimeters = CableSettings.RoundingMillimeters(UserSettings.Load().IniDirectory); }
+            catch (Exception ex) { TaskDialog.Show("NGraph — настройки кабеля", ex.Message); return; }
+
             #region 1. Read shema FSA (Get list <FSAHeader>)
             List<FSAheader> equipment = fSAmethods.ReadHederStruct_inversible(Application.ActiveUIDocument.Document, activeViewDrafting);//Элементы узлов
 
@@ -210,7 +214,7 @@ namespace NGraph.Commands;
             fi.LookupParameter(Const.Param_NS_ElementId).Set(" ");
 
             //Получаем расстояние между элементами
-            int round = 5000;
+            int round = _roundCableMillimeters;
             ElementId elementId_begin = RevitElementAccess.CreateId(long.Parse(begin_element.LookupParameter(Const.Param_NS_ElementId).AsString()));
             XYZ xyx_begin = (Application.ActiveUIDocument.Document.GetElement(elementId_begin)
                 ?? throw new InvalidOperationException($"Не найден элемент модели {elementId_begin}.")).GetPlacementPoint();

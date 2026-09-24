@@ -3,6 +3,7 @@ using System.IO;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Input;
 using ClosedXML.Excel;
 using HOVS.Model;
 using HOVS.Plugin;
@@ -17,6 +18,7 @@ public partial class HovsWorkspaceWindow
     private List<HovsRow> _rows = new();
     private HovsModel? _model;
     private HovsProject? _project;
+    private HovsRevision? _revision;
     private string _source = "";
     private readonly List<string> _temporarySources = new();
     private bool _busy;
@@ -68,6 +70,62 @@ public partial class HovsWorkspaceWindow
         try { Revisions.ItemsSource = Projects.SelectedItem is HovsProject p ? _repository.Revisions(p) : null; }
         catch (Exception ex) { Error(ex); }
     }
+    private void Project_RightClick(object sender, MouseButtonEventArgs e) => ((ListBoxItem)sender).IsSelected = true;
+    private void Revision_RightClick(object sender, MouseButtonEventArgs e) => ((DataGridRow)sender).IsSelected = true;
+    private void RenameProject_Click(object sender, RoutedEventArgs e)
+    {
+        if (Projects.SelectedItem is not HovsProject project) return;
+        var prompt = new HovsProjectNameWindow(project.Name) { Owner = this };
+        if (prompt.ShowDialog() != true) return;
+        try
+        {
+            _repository.Rename(project, prompt.ProjectName);
+            if (_project?.Id == project.Id) { _project.Name = project.Name; CurrentContext.Text = "Объект: " + project.Name + (_revision == null ? " · новый импорт" : " · " + _revision.Name); }
+            Projects.Items.Refresh(); Status.Text = "Объект переименован.";
+        }
+        catch (Exception ex) { Error(ex); }
+    }
+    private void ClearModel()
+    {
+        _model = null; _project = null; _revision = null; _source = ""; _savedState = "";
+        _rows.Clear(); Installations.ItemsSource = null; Relations.ItemsSource = null;
+        SourceText.Clear(); CurrentContext.Text = "";
+    }
+    private void DeleteProject_Click(object sender, RoutedEventArgs e)
+    {
+        if (Projects.SelectedItem is not HovsProject project) return;
+        if (_project?.Id == project.Id && !CanReplace()) return;
+        if (MessageBox.Show(this, "Удалить объект «" + project.Name + "» со всеми ревизиями и копиями XLSX? Общее обучение сохранится.", "Удаление объекта", MessageBoxButton.YesNo, MessageBoxImage.Warning, MessageBoxResult.No) != MessageBoxResult.Yes) return;
+        try
+        {
+            _repository.DeleteProject(project);
+            if (_project?.Id == project.Id) ClearModel();
+            Projects.ItemsSource = _repository.Projects();
+            if (Projects.Items.Count > 0) Projects.SelectedIndex = 0;
+            Status.Text = "Объект и его ревизии удалены. Обучение сохранено.";
+        }
+        catch (Exception ex) { Error(ex); }
+    }
+    private void DeleteRevision_Click(object sender, RoutedEventArgs e)
+    {
+        if (Projects.SelectedItem is not HovsProject project || Revisions.SelectedItem is not HovsRevision revision) return;
+        if (_revision?.Id == revision.Id && !CanReplace()) return;
+        if (MessageBox.Show(this, "Удалить ревизию «" + revision.Name + "» и её копию XLSX? Остальные ревизии сохранятся.", "Удаление ревизии", MessageBoxButton.YesNo, MessageBoxImage.Warning, MessageBoxResult.No) != MessageBoxResult.Yes) return;
+        try
+        {
+            _repository.DeleteRevision(project, revision);
+            if (_revision?.Id == revision.Id) ClearModel();
+            Revisions.ItemsSource = _repository.Revisions(project);
+            Status.Text = "Ревизия удалена.";
+        }
+        catch (Exception ex) { Error(ex); }
+    }
+    private void Compare_Click(object sender, RoutedEventArgs e)
+    {
+        if (Projects.SelectedItem is not HovsProject project) { Status.Text = "Выберите объект."; return; }
+        try { new HovsRevisionCompareWindow(_repository, project) { Owner = this }.ShowDialog(); }
+        catch (Exception ex) { Error(ex); }
+    }
     private HovsSchema ResolveSchema(XLWorkbook workbook, string path)
     {
         var analyses = workbook.Worksheets.Select(HovsSchemaAnalyzer.AnalyzeSheet).Where(x => x.LastColumn > 0)
@@ -97,7 +155,7 @@ public partial class HovsWorkspaceWindow
             SetBusy(true); Status.Text = "Анализ XLSX…";
             var importer = new ExcelImporter();
             var model = await Task.Run(() => importer.Load(snapshot, (_, _) => schema));
-            _project = project; _source = snapshot; ShowModel(model);
+            _project = project; _revision = null; _source = snapshot; ShowModel(model);
             _savedState = ""; // Импорт ещё не сохранён и не должен исчезнуть при закрытии без предупреждения.
             Status.Text = importer.LastDiagnostics.Summary + " · сохраните ревизию";
         }
@@ -107,7 +165,7 @@ public partial class HovsWorkspaceWindow
     }
     private void ShowModel(HovsModel model)
     {
-        CurrentContext.Text = "Открыт объект: " + _project?.Name;
+        CurrentContext.Text = "Объект: " + _project?.Name + (_revision == null ? " · новый импорт" : " · " + _revision.Name);
         _model = model; _rows = model.Equipment.Select(x => new HovsRow(x)).ToList();
         Installations.ItemsSource = _rows;
         Relations.ItemsSource = model.Relations;
@@ -119,7 +177,7 @@ public partial class HovsWorkspaceWindow
     {
         if (Revisions.SelectedItem is not HovsRevision revision || Projects.SelectedItem is not HovsProject project) { Status.Text = "Выберите ревизию."; return; }
         if (!CanReplace()) return;
-        try { var model = _repository.Load(revision); _source = revision.SourcePath; _project = project; ShowModel(model); Status.Text = "Открыта ревизия «" + revision.Name + "»."; }
+        try { var model = _repository.Load(revision); _source = revision.SourcePath; _project = project; _revision = revision; ShowModel(model); Status.Text = "Открыта ревизия «" + revision.Name + "»."; }
         catch (Exception ex) { Error(ex); }
     }
     private HovsModel UpdatedModel()
@@ -144,7 +202,7 @@ public partial class HovsWorkspaceWindow
             var model = UpdatedModel(); SetBusy(true);
             var project = _project;
             var revision = await Task.Run(() => _repository.Save(project, model, _source, "Ревизия " + DateTime.Now.ToString("dd.MM.yyyy HH:mm:ss")));
-            _source = revision.SourcePath; _savedState = State();
+            _revision = revision; _source = revision.SourcePath; _savedState = State();
             Projects.SelectedItem = Projects.Items.Cast<HovsProject>().FirstOrDefault(x => x.Id == project.Id);
             Revisions.ItemsSource = _repository.Revisions(project);
             CurrentContext.Text = "Объект: " + project.Name + " · " + revision.Name;

@@ -48,8 +48,51 @@ try
     repo.Save(project,model,source,"Исправления");
     Check(repo.Revisions(project).Count==2,"Revision history must be preserved");
     Check(!repo.Load(revision).Equipment.First(x=>x.Id=="П1").Attributes.ContainsKey(ProjectDataOverrides.Prefix+"Selected"),"Older revision must remain unchanged");
+    repo.Rename(project, "Переименованный & объект");
+    Check(repo.Projects().Single(x => x.Id == project.Id).Name == project.Name && repo.Revisions(project).Count == 2, "Rename preserves identity and revisions");
+    var foreign = repo.Create("Другой объект");
+    bool rejected = false;
+    try { repo.DeleteRevision(foreign, revision); } catch (ArgumentException) { rejected = true; }
+    Check(rejected && File.Exists(revision.SourcePath), "Cannot delete another object's revision");
+    rejected = false;
+    try { repo.DeleteProject(new HovsProject { Id = ".." }); } catch (ArgumentException) { rejected = true; }
+    Check(rejected && Directory.Exists(root), "Cannot delete outside repository");
+    var outside = new HovsRevision { Id = revision.Id, DirectoryPath = Path.Combine(root, "outside", project.Id, revision.Id) };
+    rejected = false;
+    try { repo.Load(outside); } catch (ArgumentException) { rejected = true; }
+    Check(rejected, "Cannot load a forged revision path");
+    var disposable = repo.Save(foreign, model, source, "Удаляемая");
+    repo.DeleteRevision(foreign, disposable);
+    Check(repo.Revisions(foreign).Count == 0 && repo.Revisions(project).Count == 2, "Revision deletion is isolated");
+    repo.DeleteProject(foreign);
+    Check(repo.Projects().Count == 1 && repo.Revisions(project).Count == 2, "Project deletion is isolated");
+    Check(File.Exists(Path.Combine(root, "training_corrections_v2.tsv")), "Deletion preserves shared training");
+
+    HovsModel Snapshot(string flow, string room, bool extra = false, bool missing = false, string filter = "G4", bool links = false)
+    {
+        var items = new List<Equipment>();
+        if (!missing) items.Add(new Equipment("П1", "П1", "П", room, new Dictionary<string,string> { ["__Installation.Airflow"] = flow, [ProjectDataOverrides.Prefix + "FilterType"] = filter }));
+        if (extra) items.Add(new Equipment("В2", "В2", "В", room, new Dictionary<string,string>()));
+        return new HovsModel(items, Array.Empty<EquipmentComponent>(), links ? new[] { new Relation("П1", "В2", RelationKind.SameRoom, .7, "test") } : Array.Empty<Relation>());
+    }
+    var first = new RevisionSnapshot("R1", Snapshot("1 200,0", "101"));
+    var same = new RevisionSnapshot("R2", Snapshot("1200", " 101 "));
+    Check(RevisionComparison.Compare(new[]{first,same}).Single().Status == "Без изменений", "Numeric airflow and whitespace normalization");
+    var changed = new RevisionSnapshot("R2", Snapshot("1500", "102", true, filter:"F7", links:true));
+    var diff = RevisionComparison.Compare(new[]{first,changed});
+    var item = diff.Single(x=>x.Designation == "П1");
+    Check(item.Status == "Изменена" && item.Details.Contains("101 → 102") && item.Details.Contains("G4 → F7") && item.Details.Contains("Связи:"), "Concrete room, saved override and relation differences");
+    Check(diff.Single(x=>x.Designation == "В2").Status == "Добавлена", "Added installation");
+    Check(RevisionComparison.Compare(new[]{changed,first}).Single(x=>x.Designation=="В2").Status == "Удалена", "Removed installation");
+    var history = RevisionComparison.Compare(new[]{first,changed,new RevisionSnapshot("R3",first.Model)});
+    Check(history.Single(x=>x.Designation == "П1").Details.Contains("R1 → R2") && history.Single(x=>x.Designation == "П1").Details.Contains("R2 → R3"), "Intermediate changes must not disappear when endpoints match");
+    var absent = new RevisionSnapshot("R2", Snapshot("", "", missing:true));
+    Check(RevisionComparison.Compare(new[]{first,absent,same}).Single().Status == "Изменена", "Intermediate absence is a change");
+    var stable = RevisionComparison.Compare(new[]{first,changed}).Single(x=>x.Designation=="П1").Details;
+    TrainingStore.SaveExplicitCorrection(first.Model.Equipment[0], new InstallationFeatures { FilterType = "F9" });
+    Check(RevisionComparison.Compare(new[]{first,changed}).Single(x=>x.Designation=="П1").Details == stable, "New training must not rewrite revision comparison");
     File.Delete(source);
     Check(File.Exists(revision.SourcePath) && repo.Load(revision).Equipment.Count==model.Equipment.Count,"Saved revision must not depend on original XLSX path");
-    Console.WriteLine("PASS: multi-sheet XLSX, positive/fallback/zero L, learning, revisions, independent source snapshot.");
+    Console.WriteLine("PASS: multi-sheet XLSX, positive/fallback/zero L, learning, revisions, independent source snapshot, rename/delete isolation, multi-revision comparison.");
 }
 finally {Directory.Delete(root,true);}

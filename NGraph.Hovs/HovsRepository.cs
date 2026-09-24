@@ -14,6 +14,7 @@ public sealed class HovsRevision
     public string Id { get; set; } = "";
     public string Name { get; set; } = "";
     public string Created { get; set; } = "";
+    public string CreatedLocal => DateTimeOffset.TryParse(Created, out var date) ? date.ToLocalTime().ToString("dd.MM.yyyy HH:mm:ss") : Created;
     public string SourcePath { get; set; } = "";
     public string DirectoryPath { get; set; } = "";
 }
@@ -23,9 +24,9 @@ public sealed class HovsRevision
 public sealed class HovsRepository
 {
     private readonly string _root;
-    public HovsRepository(string root) { _root = Path.Combine(root, "Projects"); Directory.CreateDirectory(_root); }
+    public HovsRepository(string root) { _root = Path.GetFullPath(Path.Combine(root, "Projects")); Directory.CreateDirectory(_root); }
     public IReadOnlyList<HovsProject> Projects() => Directory.GetDirectories(_root)
-        .Where(d => File.Exists(Path.Combine(d, "project.xml")))
+        .Where(d => Guid.TryParseExact(Path.GetFileName(d), "N", out _) && File.Exists(Path.Combine(d, "project.xml")))
         .Select(d => new HovsProject { Id = Path.GetFileName(d), Name = (string?)XDocument.Load(Path.Combine(d, "project.xml")).Root?.Attribute("name") ?? Path.GetFileName(d) })
         .OrderBy(p => p.Name).ToList();
     public HovsProject Create(string name)
@@ -37,14 +38,58 @@ public sealed class HovsRepository
         return p;
     }
     public IReadOnlyList<HovsRevision> Revisions(HovsProject project) => Directory.GetDirectories(ProjectPath(project))
-        .Where(d => !Path.GetFileName(d).StartsWith(".") && File.Exists(Path.Combine(d, "model.xml")))
+        .Where(d => Guid.TryParseExact(Path.GetFileName(d), "N", out _) && File.Exists(Path.Combine(d, "model.xml")))
         .Select(d => { var x = XDocument.Load(Path.Combine(d, "model.xml")).Root!; return new HovsRevision {
             Id = Path.GetFileName(d), Name = (string?)x.Attribute("name") ?? "Ревизия", Created = (string?)x.Attribute("created") ?? "",
             SourcePath = Path.Combine(d, "source.xlsx"), DirectoryPath = d }; }).OrderByDescending(x => x.Created).ToList();
     private string ProjectPath(HovsProject p)
     {
         if (!Guid.TryParseExact(p.Id, "N", out _)) throw new ArgumentException("Неверный идентификатор объекта.");
-        return Path.Combine(_root, p.Id);
+        var path = Path.Combine(_root, p.Id);
+        CheckDirectory(path);
+        if (!File.Exists(Path.Combine(path, "project.xml"))) throw new DirectoryNotFoundException("Объект больше не существует.");
+        return path;
+    }
+    // Проверка принадлежности выполняется до удаления; путь из интерфейса не является доверенным.
+    private void CheckDirectory(string path)
+    {
+        if (!Directory.Exists(path)) throw new DirectoryNotFoundException("Каталог базы не найден.");
+        if ((File.GetAttributes(_root) & FileAttributes.ReparsePoint) != 0 ||
+            (File.GetAttributes(path) & FileAttributes.ReparsePoint) != 0)
+            throw new IOException("Каталог базы не должен быть ссылкой на другой каталог.");
+    }
+    private string RevisionPath(HovsRevision revision)
+    {
+        if (!Guid.TryParseExact(revision.Id, "N", out _)) throw new ArgumentException("Неверный идентификатор ревизии.");
+        var path = Path.GetFullPath(revision.DirectoryPath);
+        var parent = Path.GetDirectoryName(path) ?? "";
+        var project = new HovsProject { Id = Path.GetFileName(parent) };
+        var expected = Path.Combine(ProjectPath(project), revision.Id);
+        if (!string.Equals(path, expected, StringComparison.OrdinalIgnoreCase)) throw new ArgumentException("Ревизия не принадлежит этой базе.");
+        CheckDirectory(path);
+        return path;
+    }
+    public void Rename(HovsProject project, string name)
+    {
+        if (string.IsNullOrWhiteSpace(name)) throw new ArgumentException("Введите имя объекта.");
+        var file = Path.Combine(ProjectPath(project), "project.xml");
+        var temp = file + "." + Guid.NewGuid().ToString("N") + ".tmp";
+        try
+        {
+            new XDocument(new XElement("Project", new XAttribute("name", name.Trim()))).Save(temp);
+            File.Replace(temp, file, null);
+            project.Name = name.Trim();
+        }
+        finally { if (File.Exists(temp)) File.Delete(temp); }
+    }
+    public void DeleteProject(HovsProject project) => Directory.Delete(ProjectPath(project), true);
+    public void DeleteRevision(HovsProject project, HovsRevision revision)
+    {
+        var projectPath = ProjectPath(project);
+        var path = RevisionPath(revision);
+        if (!string.Equals(Path.GetDirectoryName(path), projectPath, StringComparison.OrdinalIgnoreCase))
+            throw new ArgumentException("Ревизия принадлежит другому объекту.");
+        Directory.Delete(path, true);
     }
     public HovsRevision Save(HovsProject project, HovsModel model, string source, string name)
     {
@@ -72,7 +117,7 @@ public sealed class HovsRepository
     }
     public HovsModel Load(HovsRevision revision)
     {
-        var root = XDocument.Load(Path.Combine(revision.DirectoryPath, "model.xml")).Root ?? throw new InvalidDataException("Пустая ревизия.");
+        var root = XDocument.Load(Path.Combine(RevisionPath(revision), "model.xml")).Root ?? throw new InvalidDataException("Пустая ревизия.");
         string A(XElement x, string key) => (string?)x.Attribute(key) ?? "";
         var equipment = root.Element("Equipment")!.Elements().Select(x => new Equipment(A(x,"id"),A(x,"name"),A(x,"type"),A(x,"room"),
             x.Elements("Attribute").ToDictionary(a => A(a,"key"), a => a.Value))).ToList();

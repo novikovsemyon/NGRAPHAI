@@ -1,0 +1,3 @@
+<Window x:Class="NGraph.Views.HovsProjectNameWindow" xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" Title="NGraph — Имя объекта" Width="460" SizeToContent="Height" ResizeMode="NoResize">
+  <StackPanel Margin="16"><TextBlock Text="Название объекта" Style="{StaticResource Heading}"/><TextBox x:Name="NameInput" MaxLength="200"/><TextBlock x:Name="ErrorText" Foreground="#AD2234" Margin="0,6"/><StackPanel Orientation="Horizontal" HorizontalAlignment="Right"><Button Content="Отмена" Click="Cancel_Click"/><Button Content="Сохранить" Click="Save_Click" IsDefault="True"/></StackPanel></StackPanel>
+</Window>

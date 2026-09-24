@@ -1,4 +1,4 @@
-﻿using System.Diagnostics.CodeAnalysis;
+using System.Diagnostics.CodeAnalysis;
 using System.Text.RegularExpressions;
 using WixSharp;
 
@@ -53,6 +53,22 @@ public static partial class Generator
             .Select(storage => new Dir(new Id($"INSTALL{storage.Key}"), storage.Key, storage.Value.ToArray()))
             .Cast<WixEntity>()
             .ToArray();
+    }
+
+    /// <summary>Личные INI создаются при установке и сохраняются при обновлении/удалении программы.
+    /// В установке для всех пользователей шаблоны входят в каждый add-in; личная копия создаётся при первом запуске.</summary>
+    public static Dir SettingsDirectory()
+    {
+        var feature = new Feature("Настройки INI", "Штатные соответствия оборудования; существующие файлы сохраняются") { IsEnabled = true };
+        var files = Directory.GetFiles(@"NGraph\Resources\Defaults\Settings", "*.ini")
+            .OrderBy(path => path, StringComparer.Ordinal)
+            .Select((path, index) => new WixSharp.File(new Id("NGraphUserIni" + index), feature, path)
+            {
+                NeverOverwrite = true,
+                AttributesDefinition = "Component:Permanent=yes"
+            }).Cast<WixEntity>().ToArray();
+        if (files.Length != 4) throw new InvalidOperationException("Ожидались четыре штатных INI-файла.");
+        return new Dir(@"%AppDataFolder%\NGraph\Settings", files);
     }
 
     /// <summary>
