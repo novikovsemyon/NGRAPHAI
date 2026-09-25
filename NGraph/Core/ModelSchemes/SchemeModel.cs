@@ -1,13 +1,11 @@
 namespace NGraph.Core.ModelSchemes;
 
-public enum SchemeGroupingMode { Spaces, Parameters }
 public enum SchemeLevelSource { Model, Parameter }
 public enum MissingSchemeValuePolicy { SeparateGroup, Exclude, Stop }
 
 /// <summary>Источники отбора и группировки. Ключи параметров различают экземпляр и тип.</summary>
 public sealed class SchemeOptions
 {
-    public SchemeGroupingMode Mode { get; set; }
     public SchemeLevelSource LevelSource { get; set; }
     public MissingSchemeValuePolicy MissingValues { get; set; }
     public string FilterParameterKey { get; set; } = string.Empty;
@@ -33,14 +31,6 @@ public sealed class SchemeParameterChoice
     }
 }
 
-public sealed class SchemeSpace
-{
-    public string Id { get; }
-    public string Name { get; }
-    public string Number { get; }
-    public SchemeSpace(string id, string name, string number) { Id = id; Name = name; Number = number; }
-}
-
 public sealed class SchemeLevel
 {
     public string Id { get; }
@@ -50,7 +40,7 @@ public sealed class SchemeLevel
     { Id = id; Name = name; ElevationMillimeters = elevationMillimeters; }
 }
 
-/// <summary>Данные оборудования. Пространство и уровень запрашиваются только при выборе соответствующего источника.</summary>
+/// <summary>Данные для схемы по параметрам. Уровень модели запрашивается только при выборе этого источника.</summary>
 public sealed class SchemeSourceElement
 {
     public string Id { get; }
@@ -61,18 +51,16 @@ public sealed class SchemeSourceElement
     public string Mark { get; }
     public string ShortName { get; }
     public IReadOnlyDictionary<string, string> Values { get; }
-    private readonly Lazy<SchemeSpace?> _space;
     private readonly Lazy<SchemeLevel?> _level;
-    public SchemeSpace? Space => _space.Value;
     public SchemeLevel? Level => _level.Value;
 
     public SchemeSourceElement(string id, string name, string iniGroup, string position, string panelName,
         string mark, string shortName, IReadOnlyDictionary<string, string> values,
-        Func<SchemeSpace?> space, Func<SchemeLevel?> level)
+        Func<SchemeLevel?> level)
     {
         Id = id; Name = name; IniGroup = iniGroup; Position = position; PanelName = panelName;
         Mark = mark; ShortName = shortName; Values = values;
-        _space = new Lazy<SchemeSpace?>(space); _level = new Lazy<SchemeLevel?>(level);
+        _level = new Lazy<SchemeLevel?>(level);
     }
     public string Value(string key) => Values.TryGetValue(key, out var value) ? value.Trim() : string.Empty;
 }
@@ -91,17 +79,17 @@ public sealed class SchemePlannedElement
     public string GroupName { get; }
     public string GroupNumber { get; }
     public string GroupCaption { get; }
-    internal Tuple<string, string, string, string, string> GroupKey { get; }
+    internal Tuple<string, string, string, string> GroupKey { get; }
 
     internal SchemePlannedElement(SchemeSourceElement source, string sectionKey, string sectionName,
-        string levelKey, string levelName, double? elevation, string spaceKey, string groupName,
+        string levelKey, string levelName, double? elevation, string groupName,
         string groupNumber, string groupCaption)
     {
         Source = source; SectionKey = sectionKey; SectionName = sectionName; LevelKey = levelKey;
         LevelName = levelName; ElevationMillimeters = elevation; GroupName = groupName;
         GroupNumber = groupNumber; GroupCaption = groupCaption;
         // Не склеиваем строки разделителем: одинаковые имена в разных секциях/уровнях не должны сливаться.
-        GroupKey = Tuple.Create(sectionKey, levelKey, spaceKey, groupName, groupNumber);
+        GroupKey = Tuple.Create(sectionKey, levelKey, groupName, groupNumber);
     }
 }
 

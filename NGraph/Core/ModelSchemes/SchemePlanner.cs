@@ -3,7 +3,7 @@ using System.Text.RegularExpressions;
 
 namespace NGraph.Core.ModelSchemes;
 
-/// <summary>Общий план для предпросмотра и чертежа; параметрический режим не обращается к пространствам.</summary>
+/// <summary>План новой команды по параметрам. Исходная CreateSxemaByModel этот класс не использует.</summary>
 public static class SchemePlanner
 {
     public static SchemePlan Build(IReadOnlyList<SchemeSourceElement> source, SchemeOptions options)
@@ -13,12 +13,9 @@ public static class SchemePlanner
             || e.Value(options.FilterParameterKey) == options.FilterValue).ToList();
         plan.FilteredCount = filtered.Count;
         if (string.IsNullOrWhiteSpace(options.ViewName)) plan.Errors.Add("Введите название нового чертёжного вида.");
-        if (options.Mode == SchemeGroupingMode.Parameters)
-        {
-            if (options.GroupNameParameterKey.Length == 0) plan.Errors.Add("Выберите параметр названия группы вместо пространства.");
-            if (options.LevelSource == SchemeLevelSource.Parameter && options.LevelParameterKey.Length == 0)
-                plan.Errors.Add("Выберите параметр уровня.");
-        }
+        if (options.GroupNameParameterKey.Length == 0) plan.Errors.Add("Выберите параметр названия группы вместо пространства.");
+        if (options.LevelSource == SchemeLevelSource.Parameter && options.LevelParameterKey.Length == 0)
+            plan.Errors.Add("Выберите параметр уровня.");
         if (filtered.Count == 0) plan.Errors.Add("По выбранному фильтру оборудование не найдено.");
         if (plan.Errors.Count > 0) return plan;
 
@@ -32,7 +29,7 @@ public static class SchemePlanner
 
             string levelKey, levelName;
             double? elevation = null;
-            if (options.Mode == SchemeGroupingMode.Parameters && options.LevelSource == SchemeLevelSource.Parameter)
+            if (options.LevelSource == SchemeLevelSource.Parameter)
             {
                 var value = element.Value(options.LevelParameterKey);
                 levelKey = "parameter:" + value;
@@ -48,28 +45,14 @@ public static class SchemePlanner
                 if (level == null) missing.Add("уровень модели");
             }
 
-            string spaceKey, groupName, groupNumber, caption;
-            if (options.Mode == SchemeGroupingMode.Parameters)
-            {
-                // Ни Space, ни Room не нужны даже при отсутствии этих объектов в RVT.
-                spaceKey = "parameter";
-                groupName = element.Value(options.GroupNameParameterKey);
-                groupNumber = element.Value(options.GroupNumberParameterKey);
-                if (groupName.Length == 0) missing.Add("название группы");
-                if (options.GroupNumberParameterKey.Length > 0 && groupNumber.Length == 0) missing.Add("номер группы");
-                caption = groupName.Length > 0 ? groupName : "Без названия группы";
-                if (options.GroupNumberParameterKey.Length > 0)
-                    caption += " · " + (groupNumber.Length > 0 ? groupNumber : "без номера");
-            }
-            else
-            {
-                var space = element.Space;
-                spaceKey = "space:" + (space?.Id ?? string.Empty);
-                groupName = space?.Name ?? string.Empty;
-                groupNumber = space?.Number ?? string.Empty;
-                caption = space == null ? "Без пространства" : $"{groupName} (пом. {groupNumber})";
-                if (space == null) missing.Add("пространство модели");
-            }
+            // Ни Space, ни Room не нужны даже при отсутствии этих объектов в RVT.
+            var groupName = element.Value(options.GroupNameParameterKey);
+            var groupNumber = element.Value(options.GroupNumberParameterKey);
+            if (groupName.Length == 0) missing.Add("название группы");
+            if (options.GroupNumberParameterKey.Length > 0 && groupNumber.Length == 0) missing.Add("номер группы");
+            var caption = groupName.Length > 0 ? groupName : "Без названия группы";
+            if (options.GroupNumberParameterKey.Length > 0)
+                caption += " · " + (groupNumber.Length > 0 ? groupNumber : "без номера");
 
             if (missing.Count > 0)
             {
@@ -77,7 +60,7 @@ public static class SchemePlanner
                 if (options.MissingValues == MissingSchemeValuePolicy.Exclude) { plan.SkippedCount++; continue; }
             }
             plan.Elements.Add(new SchemePlannedElement(element, sectionKey, sectionName, levelKey,
-                levelName, elevation, spaceKey, groupName, groupNumber, caption));
+                levelName, elevation, groupName, groupNumber, caption));
         }
         if (options.MissingValues == MissingSchemeValuePolicy.Stop && plan.Issues.Count > 0)
             plan.Errors.Add("Заполните поля группировки или измените правило обработки пустых значений.");

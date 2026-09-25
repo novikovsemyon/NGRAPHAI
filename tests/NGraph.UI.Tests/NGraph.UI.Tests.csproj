@@ -10,9 +10,11 @@
     <Compile Include="../../NGraph/Views/LineNumberingView.xaml.cs" Link="Views/LineNumberingView.xaml.cs"/>
     <Compile Include="../../NGraph/Core/LineNumberingOptions.cs" Link="Core/LineNumberingOptions.cs"/>
     <Compile Include="../../NGraph/Core/ModelSchemes/SchemeModel.cs;../../NGraph/Core/ModelSchemes/SchemePlanner.cs;../../NGraph/Core/ModelSchemes/SchemeIniCatalog.cs;../../NGraph/Core/INIManager.cs" Link="Core/%(Filename)%(Extension)"/>
-    <Compile Include="../../NGraph/ViewModels/NGraphCreateSxemaByModelViewModel.cs" Link="ViewModels/NGraphCreateSxemaByModelViewModel.cs"/>
-    <Compile Include="../../NGraph/Views/NGraphCreateSxemaByModelView.xaml.cs" Link="Views/NGraphCreateSxemaByModelView.xaml.cs"/>
-    <Page Include="../../NGraph/Views/NGraphCreateSxemaByModelView.xaml" Link="Views/NGraphCreateSxemaByModelView.xaml"/>
+    <Compile Include="../../NGraph/ViewModels/ParameterSchemeViewModel.cs" Link="ViewModels/ParameterSchemeViewModel.cs"/>
+    <Compile Include="../../NGraph/Views/ParameterSchemeView.xaml.cs" Link="Views/ParameterSchemeView.xaml.cs"/>
+    <Page Include="../../NGraph/Views/ParameterSchemeView.xaml" Link="Views/ParameterSchemeView.xaml"/>
+    <Compile Include="../../NGraph/Views/SchemeManagerView.xaml.cs" Link="Views/SchemeManagerView.xaml.cs"/>
+    <Page Include="../../NGraph/Views/SchemeManagerView.xaml" Link="Views/SchemeManagerView.xaml"/>
     <Page Include="../../NGraph/Views/LineNumberingView.xaml" Link="Views/LineNumberingView.xaml"/>
     <Compile Include="../../NGraph/ViewModels/NGraphViewModel.cs" Link="NGraphViewModel.cs"/>
     <Page Include="../../NGraph/Views/NGraphView.xaml" Link="Views/NGraphView.xaml"/>

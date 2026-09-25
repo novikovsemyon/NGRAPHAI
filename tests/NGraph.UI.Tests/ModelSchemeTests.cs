@@ -14,18 +14,17 @@ internal static class ModelSchemeTests
     public static void Run()
     {
         SchemeSourceElement Equipment(string id, string floor = "2", string section = "1", string number = "101",
-            string group = "Щитовая", Func<SchemeSpace?>? space = null, Func<SchemeLevel?>? level = null) =>
+            string group = "Щитовая", Func<SchemeLevel?>? level = null) =>
             new(id, "Щит автоматики " + id, "АК_Газ", "QE", "ЩР-" + id, id, "Щит", new Dictionary<string, string> {
                 ["group"] = group, ["floor"] = floor, ["section"] = section, ["number"] = number,
                 ["filter"] = id == "4" ? "Резерв" : "Работа", ["type:group"] = "Группа из типа" },
-                space ?? (() => throw new Exception("Parameter mode read a Space")),
                 level ?? (() => throw new Exception("Parameter level read a model Level")));
-        SchemeOptions ParameterOptions() => new() { Mode = SchemeGroupingMode.Parameters, LevelSource = SchemeLevelSource.Parameter,
+        SchemeOptions ParameterOptions() => new() { LevelSource = SchemeLevelSource.Parameter,
             GroupNameParameterKey = "group", GroupNumberParameterKey = "number", SectionParameterKey = "section", LevelParameterKey = "floor" };
         var elements = new[] { Equipment("1"), Equipment("2", "10"), Equipment("3", section: "2"), Equipment("4", number: "102"), Equipment("5") };
         var options = ParameterOptions();
         var plan = SchemePlanner.Build(elements, options);
-        Check(plan.CanBuild && plan.Elements.Count == 5 && plan.Groups.Count == 4, "Parameter grouping independent of Space and Level");
+        Check(plan.CanBuild && plan.Elements.Count == 5 && plan.Groups.Count == 4, "Parameter grouping independent of model Level");
         Check(plan.Groups[0].Count == 2 && plan.Groups[0].LevelName == "2" && plan.Groups[2].LevelName == "10", "Natural floors and composite group identity");
         Check(plan.Elements.All(e => e.ElevationMillimeters == null), "No physical elevation in parameter mode");
         options.FilterParameterKey = "filter"; options.FilterValue = "Резерв";
@@ -51,13 +50,6 @@ internal static class ModelSchemeTests
         options.FilterValue = null;
         Check(SchemePlanner.Build(incomplete, options).Elements.Count == 2, "All-value filter");
 
-        var physical = new[] {
-            Equipment("1", space: () => new SchemeSpace("S1", "Комната", "101"), level: () => new SchemeLevel("L1", "Нижний", -3000)),
-            Equipment("2", space: () => new SchemeSpace("S2", "Комната", "101"), level: () => new SchemeLevel("L2", "Верхний", 3000)),
-            Equipment("3", space: () => new SchemeSpace("S3", "Комната", "101"), level: () => new SchemeLevel("L1", "Нижний", -3000)) };
-        options = new SchemeOptions { SectionParameterKey = "section" };
-        plan = SchemePlanner.Build(physical, options);
-        Check(plan.Groups.Count == 3 && plan.Groups[0].First.ElevationMillimeters == -3000, "Spatial IDs and actual elevation preserved");
         options = ParameterOptions(); options.LevelSource = SchemeLevelSource.Model;
         var native = new[] { Equipment("1", level: () => new SchemeLevel("L", "Этаж 1", 0)) };
         Check(SchemePlanner.Build(native, options).Elements.Single().LevelName == "Этаж 1", "Parameter groups may use native level without Space");
@@ -78,9 +70,9 @@ internal static class ModelSchemeTests
             new SchemeParameterChoice("floor", "ADSK_Этаж", false, 5, 5),
             new SchemeParameterChoice("section", "ADSK_Номер секции", false, 5, 5),
             new SchemeParameterChoice("filter", "Комментарии", false, 5, 5) };
-        var vm = new NGraphCreateSxemaByModelViewModel(elements, parameters, @"C:\Users\User\AppData\Roaming\NGraph\Settings", SchemeGroupingMode.Parameters);
+        var vm = new ParameterSchemeViewModel(elements, parameters, @"C:\Users\User\AppData\Roaming\NGraph\Settings");
         vm.UseParameterLevel = true; vm.LevelParameter = parameters[2]; vm.GroupNumberParameter = parameters[1]; vm.GroupNameParameter = parameters[0];
-        var window = new NGraphCreateSxemaByModelView(vm); Show(window);
+        var window = new ParameterSchemeView(vm); Show(window);
         var grid = (DataGrid)window.FindName("GroupsPreview");
         var confirm = (Button)window.FindName("Confirm");
         Check(grid.Items.Count == 4 && confirm.IsEnabled, "WPF preview and confirmation reflect parameter plan");
@@ -93,11 +85,26 @@ internal static class ModelSchemeTests
         ((TextBox)window.FindName("ViewName")).Text = "Схема по параметрам"; Pump(window);
         window.Hide(); window.Dispatcher.BeginInvoke(new Action(() => confirm.RaiseEvent(new RoutedEventArgs(Button.ClickEvent))));
         Check(window.ShowDialog() == true && vm.GetOptions().LevelSource == SchemeLevelSource.Parameter, "Modal result retains exact source choices");
-        var spatialVm = new NGraphCreateSxemaByModelViewModel(physical, parameters, "INI");
-        var spatialWindow = new NGraphCreateSxemaByModelView(spatialVm); Show(spatialWindow);
-        Check(!((ComboBox)spatialWindow.FindName("GroupNameParameter")).IsEnabled && spatialVm.Plan.Groups.Count == 3, "Spatial mode disables replacement fields");
-        SavePreview(spatialWindow, "model-scheme-spaces.png"); spatialWindow.Close();
-        Console.WriteLine("PASS: model scheme parameter/space modes, optional native levels, filters, empty-value policies, grouping identity, sorting, INI validation and actual WPF preview.");
+        CheckManager();
+        Console.WriteLine("PASS: independent parameter scheme, optional native levels, filters, empty-value policies, grouping identity, sorting, INI validation, WPF preview and separate manager choices.");
+    }
+
+    private static void CheckManager()
+    {
+        foreach (var method in new[] { SchemeBuildMethod.Spaces, SchemeBuildMethod.Parameters })
+        {
+            var manager = new SchemeManagerView();
+            manager.Loaded += (_, _) => manager.Dispatcher.BeginInvoke(new Action(() =>
+            {
+                if (method == SchemeBuildMethod.Spaces) SavePreview(manager, "scheme-manager.png");
+                ((Button)manager.FindName(method.ToString())).RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
+            }), DispatcherPriority.ApplicationIdle);
+            Check(manager.ShowDialog() == true && manager.SelectedMethod == method, "Manager selects the requested independent command");
+        }
+        var cancelled = new SchemeManagerView();
+        cancelled.Loaded += (_, _) => cancelled.Dispatcher.BeginInvoke(new Action(() =>
+            ((Button)cancelled.FindName("Cancel")).RaiseEvent(new RoutedEventArgs(Button.ClickEvent))));
+        Check(cancelled.ShowDialog() != true && cancelled.SelectedMethod == null, "Cancelling the manager selects no command");
     }
 
     private static void CheckIni()

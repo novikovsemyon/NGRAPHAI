@@ -3,7 +3,7 @@ using NGraph.Core.FunctionalScheme;
 
 namespace NGraph.Core.ModelSchemes;
 
-/// <summary>Единый построитель для пространств и параметров. Вся схема создаётся одной отменяемой транзакцией.</summary>
+/// <summary>Построитель только для новой команды по параметрам. Не участвует в работе CreateSxemaByModel.</summary>
 internal sealed class ModelSchemeBuilder
 {
     private readonly Document _document;

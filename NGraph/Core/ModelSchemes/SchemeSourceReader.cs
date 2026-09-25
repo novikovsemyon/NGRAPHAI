@@ -2,7 +2,7 @@ using System.Globalization;
 
 namespace NGraph.Core.ModelSchemes;
 
-/// <summary>Снимок значений для WPF. Пространства и уровни читаются только при выборе соответствующего источника.</summary>
+/// <summary>Снимок для новой команды по параметрам. Пространства не читаются; уровень нужен только при выборе источника «Уровень модели».</summary>
 internal sealed class SchemeSourceReader
 {
     public IReadOnlyList<SchemeSourceElement> Elements { get; }
@@ -25,7 +25,7 @@ internal sealed class SchemeSourceReader
             elements.Add(new SchemeSourceElement(fi.Id.ToString(), fi.Name, ReadNamed(fi, "ADSK_Группирование"),
                 ReadNamed(fi, "ADSK_Позиция"), ReadNamed(fi, "Имя панели"), ReadNamed(fi, "Марка"),
                 ReadNamed(fi, "ADSK_Наименование краткое"), values,
-                () => ReadSpace(fi), () => ReadLevel(fi, document)));
+                () => ReadLevel(fi, document)));
         }
         Elements = elements;
         var duplicateNames = new HashSet<Tuple<string, bool>>(metadata.Values.GroupBy(v => v)
@@ -65,15 +65,6 @@ internal sealed class SchemeSourceReader
                 return (document.GetElement(id)?.Name ?? parameter.AsValueString() ?? id.ToString()).Trim();
             default: return string.Empty;
         }
-    }
-
-    private static SchemeSpace? ReadSpace(FamilyInstance fi)
-    {
-        // Сохраняем семантику исходной команды: пространство последней стадии проекта.
-        var space = fi.Space;
-        return space == null ? null : new SchemeSpace(space.Id.ToString(),
-            space.get_Parameter(BuiltInParameter.ROOM_NAME)?.AsString() ?? string.Empty,
-            space.get_Parameter(BuiltInParameter.ROOM_NUMBER)?.AsString() ?? string.Empty);
     }
 
     private static SchemeLevel? ReadLevel(FamilyInstance fi, Document document)
