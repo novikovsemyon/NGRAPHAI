@@ -32,10 +32,11 @@ public class CrossLineWithElementsInViewByGraph : ExternalCommand
 
     private void ExecuteNumbering()
     {
-
-        var elements = UiDocument.Selection.PickObjects(ObjectType.Element,
+        var uiDocument = Application.ActiveUIDocument;
+        var document = uiDocument.Document;
+        var elements = uiDocument.Selection.PickObjects(ObjectType.Element,
                 new OST_ElectricalEquipmentSelectionFilter(), "Выберите оборудование и нажмите «Готово»")
-            .Select(reference => Document.GetElement(reference.ElementId)).OfType<Element>()
+            .Select(reference => document.GetElement(reference.ElementId)).OfType<Element>()
             .GroupBy(element => element.Id).Select(group => group.First()).ToList();
         if (elements.Count == 0) return;
 
@@ -50,16 +51,16 @@ public class CrossLineWithElementsInViewByGraph : ExternalCommand
         DetailLine firstLine;
         while (true)
         {
-            var reference = UiDocument.Selection.PickObject(ObjectType.Element,
+            var reference = uiDocument.Selection.PickObject(ObjectType.Element,
                 new OST_LinesSelectionFilter(), "Укажите крайний отрезок — начало нумерации");
-            firstLine = (DetailLine)Document.GetElement(reference.ElementId);
+            firstLine = (DetailLine)document.GetElement(reference.ElementId);
             if (firstLine.GetAdjoinedCurveElements(0).Count == 0 || firstLine.GetAdjoinedCurveElements(1).Count == 0)
                 break;
             TaskDialog.Show("NGraph — Нумератор по линии", "Выберите крайний отрезок незамкнутой цепочки. Для отмены нажмите Esc.");
         }
 
         // Проходим цепочку один раз. Развилка или повтор линии не дают однозначного порядка.
-        var lines = GetLineChain(firstLine);
+        var lines = GetLineChain(document, firstLine);
 
         //Для каждого элемента строим перпендикуляр (или находим ближайшее расстояние) для его центра до прямой и для концов прямой. Выбираем наименьшее
         //Запоминаем эту точку на прямой - это вершина. Т.е у линии может быть более двух вершин (уже виртуальных) и в них будет оборудование, которое с ней связано
@@ -130,8 +131,6 @@ public class CrossLineWithElementsInViewByGraph : ExternalCommand
 
 
 
-        //Выбираем линию по ElementId
-        //var line = lines.Where(i => i.Id == new ElementId(1234762)).FirstOrDefault().Location as LocationCurve;
         var curve = firstLine.GeometryCurve;
         var endpoints = new[]
         {
@@ -171,7 +170,7 @@ public class CrossLineWithElementsInViewByGraph : ExternalCommand
             Parameter = LineNumberingParameters.RequireWritable(element, choice),
             Value = options.Format(index)
         }).ToList();
-        using (var transaction = new Transaction(Document, "Нумерация по линии"))
+        using (var transaction = new Transaction(document, "Нумерация по линии"))
         {
             transaction.Start();
             foreach (var assignment in assignments)
@@ -258,7 +257,7 @@ public class CrossLineWithElementsInViewByGraph : ExternalCommand
     
     
 
-    private List<CurveElement> GetLineChain(DetailLine firstLine)
+    private static List<CurveElement> GetLineChain(Document document, DetailLine firstLine)
     {
         var lines = new List<CurveElement>();
         var visited = new HashSet<ElementId>();
@@ -278,7 +277,7 @@ public class CrossLineWithElementsInViewByGraph : ExternalCommand
                 throw new InvalidOperationException("Начало нумерации должно находиться на краю цепочки.");
             previous = current.Id;
             if (next.Count == 0) break;
-            current = Document.GetElement(next[0]) as DetailLine
+            current = document.GetElement(next[0]) as DetailLine
                 ?? throw new InvalidOperationException("Цепочка должна состоять из прямых линий детализации.");
         }
         return lines;
