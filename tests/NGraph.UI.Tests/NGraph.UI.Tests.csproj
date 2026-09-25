@@ -7,11 +7,15 @@
     <Page Include="../../NGraph/Hovs/*.xaml" Link="Hovs/%(Filename)%(Extension)"/>
     <Compile Include="../../NGraph/Views/NGraphView.xaml.cs" Link="Views/NGraphView.xaml.cs"/>
     <Compile Include="../../NGraph/Views/DialogTheme.cs" Link="Views/DialogTheme.cs"/>
+    <Compile Include="../../NGraph/Views/LineNumberingView.xaml.cs" Link="Views/LineNumberingView.xaml.cs"/>
+    <Compile Include="../../NGraph/Core/LineNumberingOptions.cs" Link="Core/LineNumberingOptions.cs"/>
+    <Page Include="../../NGraph/Views/LineNumberingView.xaml" Link="Views/LineNumberingView.xaml"/>
     <Compile Include="../../NGraph/ViewModels/NGraphViewModel.cs" Link="NGraphViewModel.cs"/>
     <Page Include="../../NGraph/Views/NGraphView.xaml" Link="Views/NGraphView.xaml"/>
     <Page Include="../../NGraph/Views/*DialogStyles.xaml" Link="Views/%(Filename)%(Extension)"/>
     <Compile Include="../../NGraph/Core/UserSettings.cs;../../NGraph/Core/DefaultSettings.cs;../../NGraph/Core/ProgramVersion.cs;../../NGraph/Core/HelpContent.cs" Link="Core/%(Filename)%(Extension)"/>
     <Resource Include="../../NGraph/Resources/Icons/NG_hovs_32.png;../../NGraph/Resources/Icons/NG_info_32.png" Link="Resources/Icons/%(Filename)%(Extension)"/>
+    <Resource Include="../../NGraph/Resources/Icons/NG_numberByline_32.png" Link="Resources/Icons/NG_numberByline_32.png"/>
     <EmbeddedResource Include="../../NGraph/Resources/Help/Commands.xml" LogicalName="NGraph.Help.Commands.xml"/>
     <EmbeddedResource Include="../../NGraph/Resources/Help/NGraph_User_Guide.pdf" LogicalName="NGraph.Help.UserGuide.pdf"/>
   </ItemGroup>

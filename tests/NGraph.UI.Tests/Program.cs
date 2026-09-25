@@ -27,6 +27,7 @@ internal static class Program
             var model = new HovsModel(new[] { new Equipment("П1", "П1", "П", "101", new Dictionary<string, string> { ["__Installation.Airflow"] = "1200" }) }, Array.Empty<EquipmentComponent>(), Array.Empty<Relation>());
             repository.Save(project, model, source, "Исходная"); repository.Save(project, model, source, "Уточнённая");
             _ = new System.Windows.Application { ShutdownMode = ShutdownMode.OnExplicitShutdown };
+            LineNumberingTests.Run();
             var workspace = new HovsWorkspaceWindow(); Show(workspace);
             var projects = (ListBox)workspace.FindName("Projects");
             if (projects.Items.Count != 1) throw new Exception("Object list did not load");
@@ -47,7 +48,7 @@ internal static class Program
             var rename = new HovsProjectNameWindow(project.Name); Show(rename); rename.Close();
             var wizard = new HovsSchemaWizardWindow(workbook, new HovsSchema { WorksheetName = "ХОВС", HeaderRow = 1, LastHeaderRow = 1, FirstDataRow = 2 }, source); Show(wizard); wizard.Close();
             var help = new NGraphView(new NGraph.ViewModels.NGraphViewModel { RevitVersion = "2027 (UI test)" }); Show(help);
-            if (((ListBox)help.FindName("Topics")).Items.Count != 23) throw new Exception("Help topics missing");
+            if (((ListBox)help.FindName("Topics")).Items.Count != 24) throw new Exception("Help topics missing");
             ((TextBox)help.FindName("Search")).Text = "ОкруглениеКабеля";
             if (((ListBox)help.FindName("Topics")).Items.Count == 0) throw new Exception("Help full-text search failed");
             help.Close(); workspace.Close();

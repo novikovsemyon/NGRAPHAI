@@ -1,0 +1,2 @@
+# PDF offsets must remain byte-for-byte identical on Windows checkouts.
+*.pdf binary
