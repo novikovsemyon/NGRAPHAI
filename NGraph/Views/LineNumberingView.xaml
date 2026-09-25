@@ -1,0 +1,55 @@
+<Window x:Class="NGraph.Views.LineNumberingView"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="NGraph — Нумератор по линии" Width="600" Height="610" MinWidth="500" MinHeight="520"
+        Icon="/NGraph;component/Resources/Icons/NG_numberByline_32.png">
+    <Window.Resources>
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <ResourceDictionary Source="CompactDialogStyles.xaml"/>
+            </ResourceDictionary.MergedDictionaries>
+        </ResourceDictionary>
+    </Window.Resources>
+    <Grid Margin="20">
+        <Grid.RowDefinitions><RowDefinition/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
+        <ScrollViewer VerticalScrollBarVisibility="Auto">
+            <StackPanel>
+                <TextBlock Text="Нумератор по линии" Style="{StaticResource Heading}"/>
+                <TextBlock x:Name="SelectionSummary" Style="{StaticResource Body}"/>
+                <Label Content="Параметр для записи" Target="{Binding ElementName=ParameterInput}"/>
+                <ComboBox x:Name="ParameterInput" DisplayMemberPath="DisplayName" MaxDropDownHeight="260"
+                          IsTextSearchEnabled="True" SelectionChanged="Parameter_Changed"/>
+                <TextBlock Text="Показаны текстовые параметры экземпляров, доступные для записи у всего выбранного оборудования."
+                           TextWrapping="Wrap" Foreground="#52627A" FontSize="12" Margin="0,5,0,8"/>
+                <TextBlock x:Name="DefaultHint" TextWrapping="Wrap" Foreground="#52627A" Margin="0,0,0,8"/>
+                <Grid>
+                    <Grid.ColumnDefinitions><ColumnDefinition/><ColumnDefinition Width="16"/><ColumnDefinition/></Grid.ColumnDefinitions>
+                    <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
+                    <Label Content="Начальное значение" Target="{Binding ElementName=StartInput}"/>
+                    <Label Grid.Column="2" Content="Инкремент (шаг)" Target="{Binding ElementName=IncrementInput}"/>
+                    <TextBox x:Name="StartInput" Grid.Row="1" Text="1" TextChanged="Input_Changed"/>
+                    <TextBox x:Name="IncrementInput" Grid.Row="1" Grid.Column="2" Text="1" TextChanged="Input_Changed"/>
+                    <Label Grid.Row="2" Content="Префикс" Target="{Binding ElementName=PrefixInput}"/>
+                    <Label Grid.Row="2" Grid.Column="2" Content="Постфикс" Target="{Binding ElementName=PostfixInput}"/>
+                    <TextBox x:Name="PrefixInput" Grid.Row="3" TextChanged="Input_Changed"/>
+                    <TextBox x:Name="PostfixInput" Grid.Row="3" Grid.Column="2" TextChanged="Input_Changed"/>
+                </Grid>
+                <TextBlock Text="Начальное значение и шаг — целые числа. Отрицательный шаг уменьшает номер; нулевой шаг недопустим."
+                           TextWrapping="Wrap" Foreground="#52627A" FontSize="12" Margin="0,7,0,12"/>
+                <Border Background="#E8EEF7" CornerRadius="5" Padding="12">
+                    <StackPanel>
+                        <TextBlock Text="Результат: префикс + число + постфикс" FontWeight="SemiBold"/>
+                        <TextBlock x:Name="PreviewText" FontSize="16" TextWrapping="Wrap" Margin="0,7,0,0"/>
+                    </StackPanel>
+                </Border>
+                <TextBlock Text="Существующие значения выбранного параметра будут заменены. Порядок задан цепочкой линий от выбранного края."
+                           TextWrapping="Wrap" FontSize="12" Foreground="#52627A" Margin="0,10,0,0"/>
+                <TextBlock x:Name="ErrorText" Foreground="#AD2234" TextWrapping="Wrap" Margin="0,8,0,0"/>
+            </StackPanel>
+        </ScrollViewer>
+        <StackPanel Grid.Row="1" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,14,0,0">
+            <Button Content="Отмена" Click="Cancel_Click"/>
+            <Button x:Name="Confirm" Content="Пронумеровать" IsDefault="True" Click="Confirm_Click"/>
+        </StackPanel>
+    </Grid>
+</Window>

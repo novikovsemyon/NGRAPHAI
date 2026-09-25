@@ -1,16 +1,16 @@
 using Autodesk.Revit.Attributes;
-using Autodesk.Revit.DB.Mechanical;
 using NGraph.Core;
+using NGraph.Views;
 using Nice3point.Revit.Toolkit.External;
 using Autodesk.Revit.UI;
 using Autodesk.Revit.UI.Selection;
-using System.Diagnostics;
+using System.Windows.Interop;
 using Nice3point.Revit.Extensions.Runtime;
 
 namespace NGraph.Commands;
 
 /// <summary>
-///  CrossLineWithElementsInViewByGraph
+/// Нумерует выбранное электрооборудование вдоль цепочки линий с заданным форматом номера.
 /// </summary>
 [UsedImplicitly]
 [Transaction(TransactionMode.Manual)]
@@ -19,122 +19,47 @@ public class CrossLineWithElementsInViewByGraph : ExternalCommand
     
     public override void Execute()
     {
-
-        //TaskDialog.Show("Выбор линии ", "Выбирете линию начала отсчета");
-
-        //Выбираем оборудование
-        
-        OST_ElectricalEquipmentSelectionFilter electricalEquipmentSelectionFilter = new OST_ElectricalEquipmentSelectionFilter();
-        var elements = Application.ActiveUIDocument.Selection.PickObjects(ObjectType.Element, electricalEquipmentSelectionFilter, "Выбирете элементы").Select(i => Application.ActiveUIDocument.Document.GetElement(i.ElementId)).OfType<Element>().ToList();
-
-
-        //var elements = UiDocument.Selection.GetElementIds().Select(i => i.ToElement(Document));
-        //TaskDialog.Show("Элементы", elements.Count().ToString());
-        //   .Where(i => i.LookupParameter("Стиль линий").AsValueString().Contains("*NG*"));
-        //var activeViewDrafting = Document.ActiveView;
-
-        //Выбираем линиии - кабель 
-        //var lines = UiDocument.Selection.GetElementIds().Select(i => i.ToElement(Document))
-        //   .Where(i => i.LookupParameter("Стиль линий").AsValueString().Contains("*NG*"));
-        //var activeViewDrafting = Document.ActiveView;
-
-        var lineBegin = ElementId.InvalidElementId;
-        OST_LinesSelectionFilter linesSelectionFilter = new OST_LinesSelectionFilter();
-        int count = 0;
-        while (count<2)
+        try { ExecuteNumbering(); }
+        catch (Autodesk.Revit.Exceptions.OperationCanceledException)
         {
+            // Esc при выборе в Revit завершает команду до открытия транзакции.
+        }
+        catch (Exception ex)
+        {
+            TaskDialog.Show("NGraph — Нумератор по линии", "Не удалось выполнить нумерацию.\n" + ex.Message);
+        }
+    }
 
-            lineBegin = Application.ActiveUIDocument.Selection.PickObject(ObjectType.Element, linesSelectionFilter, "Укажите линию начала отсчета").ElementId;
+    private void ExecuteNumbering()
+    {
 
-            if (Application.ActiveUIDocument.Document.GetElement(lineBegin) is not DetailLine selectedLine)
-                return;
-            if (
-                (selectedLine.GetAdjoinedCurveElements(0).Count == 1)
-                &
-                 (selectedLine.GetAdjoinedCurveElements(1).Count == 1)
-                )
-            {
-                TaskDialog.Show("Ошибка ", "Укажитете первую линию");
-                lineBegin = ElementId.InvalidElementId;
-                count++;
-            }
-            else
-            {
-               
+        var elements = UiDocument.Selection.PickObjects(ObjectType.Element,
+                new OST_ElectricalEquipmentSelectionFilter(), "Выберите оборудование и нажмите «Готово»")
+            .Select(reference => Document.GetElement(reference.ElementId)).OfType<Element>()
+            .GroupBy(element => element.Id).Select(group => group.First()).ToList();
+        if (elements.Count == 0) return;
 
-                break;
-            }
-
+        var parameters = LineNumberingParameters.GetCommon(elements);
+        if (parameters.Count == 0)
+        {
+            TaskDialog.Show("NGraph — Нумератор по линии",
+                "У выбранного оборудования нет общих текстовых параметров экземпляра, доступных для записи.");
+            return;
         }
 
-
-        //var lineBegin = Document.GetElement(new ElementId(1248253)).Id;
-        if (lineBegin == ElementId.InvalidElementId) return;
-        List<ElementId> list = new List<ElementId>();
-        list.Add(lineBegin);
-        var falag = true;
-        Stopwatch stopwatch = new Stopwatch();
-        stopwatch.Start();
-        
-        while (falag)
+        DetailLine firstLine;
+        while (true)
         {
-
-            if (Application.ActiveUIDocument.Document.GetElement(list.Last()) is not DetailLine lastDetailLine) break; //Последняя линия, добавленная в списке
-            var connectedDetailLine0 = lastDetailLine.GetAdjoinedCurveElements(0).FirstOrDefault();
-            var connectedDetailLine1 = lastDetailLine.GetAdjoinedCurveElements(1).FirstOrDefault();
-            
-            if (
-                (list.Any(i=>i==connectedDetailLine0) & connectedDetailLine1==null)
-                ||
-                (list.Any(i => i == connectedDetailLine1) & connectedDetailLine0 == null)
-
-                )
-            {
-                
+            var reference = UiDocument.Selection.PickObject(ObjectType.Element,
+                new OST_LinesSelectionFilter(), "Укажите крайний отрезок — начало нумерации");
+            firstLine = (DetailLine)Document.GetElement(reference.ElementId);
+            if (firstLine.GetAdjoinedCurveElements(0).Count == 0 || firstLine.GetAdjoinedCurveElements(1).Count == 0)
                 break;
-                
-            }
-            
-            if (connectedDetailLine0 != null && !list.Contains(connectedDetailLine0))
-            {
-                if (connectedDetailLine0 != null)
-                    list.Add(connectedDetailLine0);
-            }
-            if (connectedDetailLine1 != null && !list.Contains(connectedDetailLine1))
-            {
-                if (connectedDetailLine1 != null)
-                    list.Add(connectedDetailLine1);
-            }
-            
-
-
-
-            if (stopwatch.ElapsedMilliseconds >= 10000) break;
-
+            TaskDialog.Show("NGraph — Нумератор по линии", "Выберите крайний отрезок незамкнутой цепочки. Для отмены нажмите Esc.");
         }
-        
 
-        //TaskDialog.Show("Выбор линии ", "Последовательность из "+ list.Count().ToString() + " отрезков");
-        var lines = list.Select(i => Application.ActiveUIDocument.Document.GetElement(i)).OfType<CurveElement>().ToList();
-        
-        //Выбираем элементы
-        /*
-        var el1 = Document.GetElement(new ElementId(1247896));
-        var el2 = Document.GetElement(new ElementId(1247897));
-        var el3 = Document.GetElement(new ElementId(1247902));
-        var el4 = Document.GetElement(new ElementId(1247898));
-        var el5 = Document.GetElement(new ElementId(1247903));
-        var el6 = Document.GetElement(new ElementId(1247904));
-        var el7 = Document.GetElement(new ElementId(1247888));
-        var el8 = Document.GetElement(new ElementId(1247887));
-        var el9 = Document.GetElement(new ElementId(1247905));
-        var el10 = Document.GetElement(new ElementId(1247899));
-        var el11 = Document.GetElement(new ElementId(1247895));
-        
-        List<Element> elements = new List<Element> { el1,el2,el3,el4, el5, el6, el7, el8 , el9, el10, el11 };
-        */
-       
-
+        // Проходим цепочку один раз. Развилка или повтор линии не дают однозначного порядка.
+        var lines = GetLineChain(firstLine);
 
         //Для каждого элемента строим перпендикуляр (или находим ближайшее расстояние) для его центра до прямой и для концов прямой. Выбираем наименьшее
         //Запоминаем эту точку на прямой - это вершина. Т.е у линии может быть более двух вершин (уже виртуальных) и в них будет оборудование, которое с ней связано
@@ -207,7 +132,6 @@ public class CrossLineWithElementsInViewByGraph : ExternalCommand
 
         //Выбираем линию по ElementId
         //var line = lines.Where(i => i.Id == new ElementId(1234762)).FirstOrDefault().Location as LocationCurve;
-        if (Application.ActiveUIDocument.Document.GetElement(lineBegin) is not DetailLine firstLine) return;
         var curve = firstLine.GeometryCurve;
         var endpoints = new[]
         {
@@ -230,39 +154,37 @@ public class CrossLineWithElementsInViewByGraph : ExternalCommand
         }
         vertexIds.Insert(0, vertexId_begin);
 
-        int j = 1;
-        using (Transaction tx = new Transaction(Application.ActiveUIDocument.Document, "Нумерация по линии"))
+        var orderedElements = vertexIds.SelectMany(vertex => vertex.Objects.OfType<ElementInGraph>())
+            .Select(item => item.Element).ToList();
+        if (orderedElements.Count != elements.Count || orderedElements.Select(e => e.Id).Distinct().Count() != elements.Count)
+            throw new InvalidOperationException("Не удалось однозначно упорядочить всё выбранное оборудование. Проверьте цепочку линий и расположение элементов.");
+
+        var window = new LineNumberingView(parameters, orderedElements.Count);
+        new WindowInteropHelper(window).Owner = Application.MainWindowHandle;
+        if (window.ShowDialog() != true || window.SelectedParameter is not { } choice || window.Options is not { } options)
+            return;
+
+        // Проверяем все назначения заранее. В транзакции выполняется только готовый план записи.
+        var assignments = orderedElements.Select((element, index) => new
         {
-            tx.Start("Нумерация по линии");
-
-            
-            foreach (var v in vertexIds)
+            Element = element,
+            Parameter = LineNumberingParameters.RequireWritable(element, choice),
+            Value = options.Format(index)
+        }).ToList();
+        using (var transaction = new Transaction(Document, "Нумерация по линии"))
+        {
+            transaction.Start();
+            foreach (var assignment in assignments)
             {
-
-                foreach (var e in v.Objects.OfType<ElementInGraph>())
-                {
-
-                    NgContext.RequireParameter(e.Element, "Имя панели").Set(j.ToString());
-
-                    j++;
-                }
-
+                // Set возвращает false и для уже совпадающего значения — это не ошибка.
+                if (assignment.Parameter.AsString() == assignment.Value) continue;
+                if (!assignment.Parameter.Set(assignment.Value))
+                    throw new InvalidOperationException($"Revit отклонил значение «{assignment.Value}» для элемента {assignment.Element.Id}. Все изменения отменены.");
             }
-
-            
-
-
-            tx.Commit();
+            if (transaction.Commit() != TransactionStatus.Committed)
+                throw new InvalidOperationException("Revit не подтвердил запись номеров.");
         }
-
-
-        //TaskDialog.Show("Результат ", "Последовательность из " + list.Count().ToString() + " отрезков" + "\n"+ "Пронумеровано "+ j.ToString() + " элементов" );
-
-
-
-
-
-
+        TaskDialog.Show("NGraph — Нумератор по линии", $"Пронумеровано элементов: {assignments.Count}.\nПараметр: {choice.Name}.");
 
         /// <summary>
         /// Построение графа из списка линий 
@@ -335,6 +257,32 @@ public class CrossLineWithElementsInViewByGraph : ExternalCommand
 }
     
     
+
+    private List<CurveElement> GetLineChain(DetailLine firstLine)
+    {
+        var lines = new List<CurveElement>();
+        var visited = new HashSet<ElementId>();
+        DetailLine? current = firstLine;
+        ElementId? previous = null;
+        while (current != null)
+        {
+            if (!visited.Add(current.Id))
+                throw new InvalidOperationException("Цепочка линий замкнута. Выберите незамкнутую цепочку без развилок.");
+            lines.Add(current);
+            var end0 = current.GetAdjoinedCurveElements(0);
+            var end1 = current.GetAdjoinedCurveElements(1);
+            if (end0.Count > 1 || end1.Count > 1)
+                throw new InvalidOperationException("У цепочки есть развилка. Для нумерации нужна одна незамкнутая цепочка.");
+            var next = end0.Concat(end1).Where(id => id != previous).Distinct().ToList();
+            if (next.Count > 1)
+                throw new InvalidOperationException("Начало нумерации должно находиться на краю цепочки.");
+            previous = current.Id;
+            if (next.Count == 0) break;
+            current = Document.GetElement(next[0]) as DetailLine
+                ?? throw new InvalidOperationException("Цепочка должна состоять из прямых линий детализации.");
+        }
+        return lines;
+    }
 
         /// <summary>
         /// Преддставляет виртуальную линию между элементами
@@ -458,11 +406,8 @@ public class CrossLineWithElementsInViewByGraph : ExternalCommand
         {
             public bool AllowElement(Element element)
             {
-                if (element.Category.Name == "Электрооборудование")
-                {
-                    return true;
-                }
-                return false;
+                return element.Category?.Id == new ElementId(BuiltInCategory.OST_ElectricalEquipment)
+                    && element.Location is LocationPoint;
             }
 
             public bool AllowReference(Reference refer, XYZ point)

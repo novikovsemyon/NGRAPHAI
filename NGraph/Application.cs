@@ -61,7 +61,7 @@ public class Application : ExternalApplication
             .AddPushButton<CrossLineWithElementsInViewByGraph>("Нумератор\nпо линии");
         buttonNumberingByLine.SetImage("/NGraph;component/Resources/Icons/NG_numberByline_16.png");
         buttonNumberingByLine.SetLargeImage("/NGraph;component/Resources/Icons/NG_numberByline_32.png");
-        buttonNumberingByLine.LongDescription = "Последовательность действий:\n1. Выбрать элементы рамкой\n2. Подтвердить действие нажав: <Готово>\n3. Указать отрезок - начало линии";
+        buttonNumberingByLine.LongDescription = "Последовательность действий:\n1. Выбрать оборудование и нажать «Готово»\n2. Указать крайний отрезок цепочки\n3. Выбрать параметр, начальное значение, шаг, префикс и постфикс\n4. Проверить образец и нажать «Пронумеровать»";
 
 
 
