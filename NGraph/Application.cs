@@ -72,6 +72,7 @@ public class Application : ExternalApplication
         var buttonCreateSxemaByModel = panelStruct.AddPushButton<CreateSxemaByModel>("Менеджер\nсхем");
         buttonCreateSxemaByModel.SetImage("/NGraph;component/Resources/Icons/NG_structura_16.png");
         buttonCreateSxemaByModel.SetLargeImage("/NGraph;component/Resources/Icons/NG_structura_32.png");
+        buttonCreateSxemaByModel.LongDescription = "Структурная схема по пространствам или параметрам оборудования. Выберите отбор, секцию, замену пространства и источник уровня, затем проверьте группировку перед построением.";
 
         var buttonCreateConnection = panelStruct.AddPushButton<CreateСonnectionsLineOnViewDrafting>("Расставить\nкабель");
         buttonCreateConnection.SetImage("/NGraph;component/Resources/Icons/NG_cabel_16.png");
