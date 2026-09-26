@@ -77,7 +77,7 @@ internal sealed class RevitCableSource
     private void ReadNetworks()
     {
         var endpoints = Connections.Where(c => c.Error.Length == 0).SelectMany(c => new[] { c.BeginId, c.EndId })
-            .Distinct().Select(id => _document.GetElement(RevitElementAccess.CreateId(id))).OfType<Element>().ToList();
+            .Distinct().Select(ModelElement).OfType<Element>().ToList();
         // Система выбирается по физическим HVAC-портам оборудования; электрические цепи не читаются.
         var systems = endpoints.SelectMany(Ports).Select(c => c.MEPSystem).OfType<MechanicalSystem>()
             .GroupBy(s => s.Id).Select(g => g.First()).OrderBy(s => Id(s.Id)).ToList();
@@ -134,6 +134,7 @@ internal sealed class RevitCableSource
                 double feet;
                 if (parameter <= start + 1e-9) feet = 0;
                 else if (parameter >= finish - 1e-9) feet = curve.Length;
+                else if (curve is Line || curve is Arc) feet = curve.Length * (parameter-start)/(finish-start);
                 else { using var part = curve.Clone(); part.MakeBound(start, parameter); feet = part.Length; }
                 return (Port: port, Meters: feet*0.3048);
             }).OrderBy(p => p.Meters).ThenBy(p => p.Port.Id).ToList();
@@ -145,6 +146,11 @@ internal sealed class RevitCableSource
     }
 
     private static string PortKey(MechanicalSystem system, Connector port) => $"{system.Id}:{port.Owner.Id}:{port.Id}";
+    private Element? ModelElement(long id)
+    {
+        try { return _document.GetElement(RevitElementAccess.CreateId(id)); }
+        catch (OverflowException) { return null; } // неверный NS_ElementId отобразится в строке, остальные кабели доступны
+    }
     private static bool Physical(Connector c) => c.Domain == Domain.DomainHvac &&
         (c.ConnectorType == ConnectorType.End || c.ConnectorType == ConnectorType.Curve || c.ConnectorType == ConnectorType.Physical);
     private static IEnumerable<Connector> Ports(Element element)

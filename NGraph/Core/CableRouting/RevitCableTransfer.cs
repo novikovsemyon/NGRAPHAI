@@ -129,10 +129,18 @@ internal sealed class RevitCableTransfer
         var parameters = e.GetParameters(Const.Param_CJ_Lenght);
         if (parameters.Count != 1 || parameters[0].IsReadOnly) throw new InvalidOperationException($"У зелёной точки {e.Id} недоступен однозначный параметр {Const.Param_CJ_Lenght}.");
         var p = parameters[0];
-        if (p.StorageType != StorageType.Integer && p.StorageType != StorageType.String &&
+        if (!(p.StorageType == StorageType.Integer && IsInteger(p)) && p.StorageType != StorageType.String &&
             !(p.StorageType == StorageType.Double && (IsLength(p) || IsNumber(p))))
             throw new InvalidOperationException($"У зелёной точки {e.Id} неподдерживаемый тип параметра длины.");
         return p;
+    }
+    private static bool IsInteger(Parameter p)
+    {
+#if REVIT2022_OR_GREATER
+        return p.Definition.GetDataType() == SpecTypeId.Int.Integer;
+#else
+        return p.Definition.ParameterType == ParameterType.Integer;
+#endif
     }
     private static bool IsLength(Parameter p)
     {

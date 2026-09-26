@@ -69,7 +69,7 @@ public static class CableDiagram
                 var component = candidates[0];
                 var local = equipment.Where(e => component.Any(l => e.Contains(l.A) || e.Contains(l.B))).ToList();
                 var begin = ResolveEnd(cable.Begin, local, "начала");
-                var end = ResolveEnd(cable.End, local, "конца");
+                var end = ResolveEnd(cable.End, local, "конца", cable.Point);
                 if (!end.Contains(cable.Point)) throw new InvalidOperationException("Точка перемещена от окончания кабеля. Заново расставьте кабель на схеме.");
                 if (begin.ModelId <= 0 || end.ModelId <= 0) throw new InvalidOperationException("У оборудования не заполнен корректный NS_ElementId.");
                 var star = component.Any(l => l.Pinned);
@@ -86,13 +86,13 @@ public static class CableDiagram
             ? new CableConnection(r.Cable, r.BeginId, r.EndId, r.IsStar, "Номер кабеля повторяется на этом виде. Проверьте зелёные точки.") : r).ToList();
     }
 
-    private static DiagramEquipment ResolveEnd(string panel, List<DiagramEquipment> equipment, string side)
+    private static DiagramEquipment ResolveEnd(string panel, List<DiagramEquipment> equipment, string side, DiagramPoint? point = null)
     {
         if (string.IsNullOrWhiteSpace(panel)) throw new InvalidOperationException($"Не заполнено имя {side} кабеля.");
         var matches = equipment.Where(e => string.Equals(e.Panel.Trim(), panel.Trim(), StringComparison.Ordinal)).ToList();
         if (matches.Count == 0) throw new InvalidOperationException($"Не найдено оборудование {side} «{panel}» в соединении. Проверьте NS_Имя панели.");
         var ids = matches.Select(e => e.ModelId).Distinct().ToList();
         if (ids.Count != 1) throw new InvalidOperationException($"Неоднозначное имя {side} «{panel}»: несколько NS_ElementId в одной сети.");
-        return matches[0];
+        return point.HasValue ? matches.FirstOrDefault(e => e.Contains(point.Value)) ?? matches[0] : matches[0];
     }
 }
