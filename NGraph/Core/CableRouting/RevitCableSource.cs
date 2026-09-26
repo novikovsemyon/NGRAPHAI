@@ -53,8 +53,9 @@ internal sealed class RevitCableSource
             {
                 var box = instance.get_BoundingBox(View); if (box == null) continue;
                 var panel = Text(instance, Const.Param_NS_PanelName);
-                if (panel.Length == 0) continue;
-                long.TryParse(Text(instance, Const.Param_NS_ElementId), out var modelId);
+                var link = Text(instance, Const.Param_NS_ElementId);
+                if (panel.Length == 0 && link.Length == 0) continue;
+                long.TryParse(link, out var modelId);
                 var corners = new List<DiagramPoint>();
                 foreach (var x in new[] { box.Min.X, box.Max.X }) foreach (var y in new[] { box.Min.Y, box.Max.Y })
                     foreach (var z in new[] { box.Min.Z, box.Max.Z }) corners.Add(Point(box.Transform.OfPoint(new XYZ(x,y,z))));

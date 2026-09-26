@@ -12,7 +12,7 @@ internal static class DuctCableTests
 {
     public static void Run()
     {
-        TestPaths(); TestDiagram(); TestWritesAndWindow(); TestPreferences();
+        TestPaths(); TestDiagram(); TestStarGeometry(); TestWritesAndWindow(); TestPreferences();
         Console.WriteLine("PASS: duct cable shortest paths, fractional lengths, cycles, disconnected systems, stars, duplicate endpoints, write scopes, rounding, per-view persistence and real WPF dialog.");
     }
 
@@ -46,7 +46,7 @@ internal static class DuctCableTests
         equipment.Add(Eq(4,"Д1",300,100)); // такое же имя в ДРУГОЙ сети допустимо
         Check(CableDiagram.Resolve(equipment,lines,cables).All(c => c.Error == ""), "Names resolved within the line component");
         equipment.Add(Eq(5,"Д1",100,0));
-        Check(CableDiagram.Resolve(equipment,lines,cables)[0].Error.Contains("Неоднозначное"), "Duplicate endpoint within a connected component blocked");
+        Check(CableDiagram.Resolve(equipment,lines,cables)[0].Error.Contains("одно начало"), "Two different model elements on the pinned bus blocked");
         equipment.RemoveAt(equipment.Count-1);
         cables[1].Number="1.1";
         Check(CableDiagram.Resolve(equipment,lines,cables).All(c => c.Error.Contains("повторяется")), "Duplicate cable numbers blocked");
@@ -55,6 +55,54 @@ internal static class DuctCableTests
         var crossing = new[] { Line(-100,0,100,0), Line(0,-100,0,100) };
         var crossEquipment = new[] { Eq(1,"A",-100,0), Eq(2,"B",100,0), Eq(3,"A",0,-100), Eq(4,"B",0,100) };
         Check(CableDiagram.Resolve(crossEquipment,crossing,new[] { Cable(1,"1","A","B",100,0) })[0].Error == "", "Crossing lines without endpoint stay separate");
+        Check(CableDiagram.Resolve(new[] {Eq(1,"A",0,0),Eq(2,"B",100,0),Eq(3,"B",50,0)},
+            new[] {Line(0,0,50,0),Line(50,0,100,0)},new[] {Cable(1,"1","A","B",100,0)})[0].Error.Contains("Неоднозначное"),
+            "Ordinary unpinned connections retain their name-based checks");
+    }
+
+    private static void TestStarGeometry()
+    {
+        // Один и тот же текст у всех панелей. Старые CJ-поля намеренно пустые/устаревшие:
+        // реальную связь задают закрепление линий, положение зелёной точки и NS_ElementId.
+        var equipment = new List<DiagramEquipment> {Eq(1,"Панель",0,0),Eq(2,"Панель",30,100),Eq(3,"Панель",70,100)};
+        var lines = new List<DiagramLine> {Line(0,0,0,50,true),Line(100,50,0,50,true),
+            Line(30,50,30,70),Line(30,100,30,70),Line(70,100,70,50)};
+        var cables = new[] {Cable(11,"1.1","старое начало","Панель",30,100),Cable(12,"1.2","","",70,100)};
+        var connections = CableDiagram.Resolve(equipment,lines,cables);
+        Check(connections.All(c=>c.Error=="" && c.IsStar && c.BeginId==1) &&
+            connections.Select(c=>c.EndId).SequenceEqual(new long[]{2,3}), "Star with duplicate panel names resolves each unpinned branch geometrically");
+        Check(connections.All(c=>c.BeginLabel=="Панель" && c.EndLabel=="Панель") && cables[0].Begin=="старое начало" && cables[1].End=="",
+            "Preview uses actual endpoint captions without rewriting source cable fields");
+        var reversed = CableDiagram.Resolve(equipment.AsEnumerable().Reverse().ToList(),
+            lines.AsEnumerable().Reverse().Select(l=>new DiagramLine{A=l.B,B=l.A,Pinned=l.Pinned}).ToList(),cables);
+        Check(reversed.Select(c=>c.BeginId+":"+c.EndId).SequenceEqual(connections.Select(c=>c.BeginId+":"+c.EndId)),
+            "Star orientation does not depend on line direction or collector order");
+
+        var graph=new CableRouteGraph();graph.AddPort("root",1);graph.AddPort("fork",9);graph.AddPort("end1",2);graph.AddPort("end2",3);
+        graph.Connect("root","fork",4,101,"АОВ");graph.Connect("fork","end1",6,102,"АОВ");graph.Connect("fork","end2",16,103,"АОВ");
+        var routes=connections.Select(c=>new CableRouteRow(c,graph.Find(c.BeginId,c.EndId),"0","")).ToList();
+        Check(routes[0].Path!.Meters==10 && routes[1].Path!.Meters==20,"Identical captions route to different actual model endpoints");
+        var writes=CableWritePlanner.Plan(routes,new[]{Duct(101,"s",""),Duct(102,"s",""),Duct(103,"s","")},"text",false,false);
+        Check(writes.Single(w=>w.Id==101).NewValue=="1.1"+Environment.NewLine+"1.2" &&
+            writes.Single(w=>w.Id==102).NewValue=="1.1" && writes.Single(w=>w.Id==103).NewValue=="1.2", "Branch cable numbers reach the correct duct routes");
+
+        equipment[2].Panel="";
+        Check(CableDiagram.Resolve(equipment,lines,cables)[1].EndLabel=="Элемент 3","Blank panel caption is optional for geometric star");
+        equipment[2].ModelId=0;
+        var invalid=CableDiagram.Resolve(equipment,lines,cables);
+        Check(invalid[0].Error=="" && invalid[1].IsStar && invalid[1].Error.Contains("NS_ElementId"),"Missing model ID blocks only the affected branch");
+        equipment[2].ModelId=3;
+        equipment.Add(Eq(4,"Другой элемент",30,100));
+        Check(CableDiagram.Resolve(equipment,lines,cables)[0].Error.Contains("совмещены"),"Truly overlapping endpoints remain an explicit geometry error");
+        equipment.RemoveAt(equipment.Count-1);
+        cables[0].Point=new DiagramPoint(30,50);
+        Check(CableDiagram.Resolve(equipment,lines,cables)[0].Error.Contains("окончания"),"Cable point at the bus junction is not mistaken for equipment");
+        cables[0].Point=new DiagramPoint(30,100);
+        lines.Add(Line(200,50,200,0,true));lines.Add(Line(100,50,200,50));equipment.Add(Eq(5,"Панель",200,0));
+        Check(CableDiagram.Resolve(equipment,lines,cables).All(c=>c.Error=="" && c.BeginId==1),"A second bus connected by another unpinned branch does not replace the local star root");
+        lines.Add(Line(70,70,200,50));
+        Check(CableDiagram.Resolve(equipment,lines,cables)[1].Error.Contains("одной закреплённой"),"An actual branch joined to two pinned buses is rejected without guessing");
+        Console.WriteLine("PASS: star geometry resolves equal/blank/stale names, pinned polylines, unpinned branches, NS_ElementId routes, multiple buses and real geometric ambiguity.");
     }
 
     private static void TestWritesAndWindow()

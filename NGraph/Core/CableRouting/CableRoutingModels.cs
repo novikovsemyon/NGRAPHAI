@@ -17,8 +17,8 @@ public sealed class CableRouteRow : CableNotify
     public CableConnection Connection { get; }
     public CablePath? Path { get; }
     public string Number => Connection.Cable.Number;
-    public string Begin => Connection.Cable.Begin;
-    public string End => Connection.Cable.End;
+    public string Begin => Connection.BeginLabel;
+    public string End => Connection.EndLabel;
     public long Id => Connection.Cable.Id;
     public string Kind => Connection.IsStar ? "Звезда" : "Соединение";
     public string ModelIds => $"{Connection.BeginId} → {Connection.EndId}";

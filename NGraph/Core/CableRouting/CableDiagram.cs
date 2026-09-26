@@ -38,8 +38,13 @@ public sealed class CableConnection
 {
     public DiagramCable Cable { get; } public long BeginId { get; } public long EndId { get; }
     public bool IsStar { get; } public string Error { get; }
-    public CableConnection(DiagramCable cable, long beginId, long endId, bool star, string error = "")
-    { Cable = cable; BeginId = beginId; EndId = endId; IsStar = star; Error = error; }
+    public string BeginLabel { get; } public string EndLabel { get; }
+    public CableConnection(DiagramCable cable, long beginId, long endId, bool star, string error = "",
+        string? beginLabel = null, string? endLabel = null)
+    {
+        Cable = cable; BeginId = beginId; EndId = endId; IsStar = star; Error = error;
+        BeginLabel = beginLabel ?? cable.Begin; EndLabel = endLabel ?? cable.End;
+    }
 }
 
 /// <summary>Соединения читаются из существующих зелёных точек, без создания электрических цепей.</summary>
@@ -48,18 +53,13 @@ public static class CableDiagram
     public static IReadOnlyList<CableConnection> Resolve(IReadOnlyList<DiagramEquipment> equipment,
         IReadOnlyList<DiagramLine> lines, IReadOnlyList<DiagramCable> cables)
     {
-        var parent = Enumerable.Range(0, lines.Count).ToArray();
-        int Root(int i) { while (parent[i] != i) { parent[i] = parent[parent[i]]; i = parent[i]; } return i; }
-        // Ответвление может заканчиваться внутри закреплённой шины. Пересечение двух
-        // линий без конечной точки не является соединением и не склеивает разные сети.
-        for (int i=0; i<lines.Count; i++) for (int j=i+1; j<lines.Count; j++)
-            if (lines[i].Contains(lines[j].A) || lines[i].Contains(lines[j].B) ||
-                lines[j].Contains(lines[i].A) || lines[j].Contains(lines[i].B)) parent[Root(j)] = Root(i);
-        var components = Enumerable.Range(0, lines.Count).GroupBy(Root)
-            .Select(g => g.Select(i => lines[i]).ToList()).ToList();
+        var components = Components(lines);
+        var starParts = components.Where(c => c.Any(l => l.Pinned)).ToDictionary(c => c,
+            c => (Buses: Components(c.Where(l => l.Pinned).ToList()), Branches: Components(c.Where(l => !l.Pinned).ToList())));
         var result = new List<CableConnection>();
         foreach (var cable in cables)
         {
+            var star = false;
             try
             {
                 if (cable.Error.Length > 0) throw new InvalidOperationException(cable.Error);
@@ -68,22 +68,76 @@ public static class CableDiagram
                 if (candidates.Count != 1) throw new InvalidOperationException("Зелёная точка должна находиться на одной сети линий *NG*. Проверьте её положение.");
                 var component = candidates[0];
                 var local = equipment.Where(e => component.Any(l => e.Contains(l.A) || e.Contains(l.B))).ToList();
-                var begin = ResolveEnd(cable.Begin, local, "начала");
-                var end = ResolveEnd(cable.End, local, "конца", cable.Point);
-                if (!end.Contains(cable.Point)) throw new InvalidOperationException("Точка перемещена от окончания кабеля. Заново расставьте кабель на схеме.");
+                star = starParts.TryGetValue(component, out var parts);
+                DiagramEquipment begin, end;
+                if (star) (begin, end) = ResolveStar(cable, parts.Buses, parts.Branches, local);
+                else
+                {
+                    begin = ResolveEnd(cable.Begin, local, "начала");
+                    end = ResolveEnd(cable.End, local, "конца", cable.Point);
+                    if (!end.Contains(cable.Point)) throw new InvalidOperationException("Точка перемещена от окончания кабеля. Заново расставьте кабель на схеме.");
+                }
                 if (begin.ModelId <= 0 || end.ModelId <= 0) throw new InvalidOperationException("У оборудования не заполнен корректный NS_ElementId.");
-                var star = component.Any(l => l.Pinned);
-                if (star && !component.Any(l => l.Pinned && (begin.Contains(l.A) || begin.Contains(l.B))))
-                    throw new InvalidOperationException("Начало звезды не примыкает к закреплённой линии. Проверьте CJ_Начало кабеля.");
-                result.Add(new CableConnection(cable, begin.ModelId, end.ModelId, star));
+                result.Add(new CableConnection(cable, begin.ModelId, end.ModelId, star,
+                    beginLabel: star ? Label(begin) : null, endLabel: star ? Label(end) : null));
             }
-            catch (InvalidOperationException ex) { result.Add(new CableConnection(cable, 0, 0, false, ex.Message)); }
+            catch (InvalidOperationException ex) { result.Add(new CableConnection(cable, 0, 0, star, ex.Message)); }
         }
         // Одинаковый номер у разных кабелей теряет смысл на общей трассе: не объединяем молча.
         var duplicates = new HashSet<string>(cables.Where(c => !string.IsNullOrWhiteSpace(c.Number))
             .GroupBy(c => c.Number, StringComparer.Ordinal).Where(g => g.Count() > 1).Select(g => g.Key), StringComparer.Ordinal);
         return result.Select(r => duplicates.Contains(r.Cable.Number)
-            ? new CableConnection(r.Cable, r.BeginId, r.EndId, r.IsStar, "Номер кабеля повторяется на этом виде. Проверьте зелёные точки.") : r).ToList();
+            ? new CableConnection(r.Cable, r.BeginId, r.EndId, r.IsStar, "Номер кабеля повторяется на этом виде. Проверьте зелёные точки.", r.BeginLabel, r.EndLabel) : r).ToList();
+    }
+
+    private static (DiagramEquipment Begin, DiagramEquipment End) ResolveStar(DiagramCable cable,
+        IReadOnlyList<List<DiagramLine>> pinnedParts, IReadOnlyList<List<DiagramLine>> unpinnedParts, List<DiagramEquipment> equipment)
+    {
+        // Убираем закреплённые линии из обхода ответвлений: иначе все окончания звезды
+        // попадут в один поиск по имени. Конкретное ответвление задаётся положением зелёной точки.
+        var branches = unpinnedParts.Where(b => b.Any(l => l.Contains(cable.Point))).ToList();
+        if (branches.Count != 1)
+            throw new InvalidOperationException("Зелёная точка звезды должна находиться на незакреплённом ответвлении к оборудованию.");
+        var branch = branches[0];
+        var buses = pinnedParts.Where(b => b.Any(pinned => branch.Any(line => Touches(pinned, line)))).ToList();
+        if (buses.Count != 1)
+            throw new InvalidOperationException("Ответвление должно присоединяться к одной закреплённой линии или связной цепочке закреплённых линий.");
+        var bus = buses[0];
+        var begin = UniqueEquipment(equipment.Where(e => bus.Any(l => e.Contains(l.A) || e.Contains(l.B))).ToList(),
+            "У закреплённой линии не найден элемент начала звезды.",
+            "Закреплённая линия присоединена к нескольким элементам модели. У звезды должно быть одно начало.");
+        if (begin.ModelId <= 0) throw new InvalidOperationException("У начала звезды не заполнен корректный NS_ElementId.");
+        // Названия панелей у разных окончаний могут совпадать. Берём NS_ElementId
+        // обозначения, к которому пришло незакреплённое ответвление с этой зелёной точкой.
+        var end = UniqueEquipment(equipment.Where(e => e.ModelId != begin.ModelId && e.Contains(cable.Point) &&
+            branch.Any(l => (l.A.Distance(cable.Point) <= 1 && e.Contains(l.A)) ||
+                            (l.B.Distance(cable.Point) <= 1 && e.Contains(l.B)))).ToList(),
+            "У зелёной точки не найден элемент окончания незакреплённого ответвления звезды.",
+            "В окончании ответвления совмещены несколько элементов модели. Разведите обозначения на схеме.");
+        return (begin, end);
+    }
+
+    private static DiagramEquipment UniqueEquipment(List<DiagramEquipment> candidates, string missing, string ambiguous)
+    {
+        if (candidates.Count == 0) throw new InvalidOperationException(missing);
+        if (candidates.Select(e => e.ModelId).Distinct().Count() != 1) throw new InvalidOperationException(ambiguous);
+        return candidates[0];
+    }
+
+    private static string Label(DiagramEquipment equipment) => string.IsNullOrWhiteSpace(equipment.Panel)
+        ? $"Элемент {equipment.ModelId}" : equipment.Panel;
+
+    private static bool Touches(DiagramLine a, DiagramLine b) => a.Contains(b.A) || a.Contains(b.B) || b.Contains(a.A) || b.Contains(a.B);
+
+    private static List<List<DiagramLine>> Components(IReadOnlyList<DiagramLine> lines)
+    {
+        var parent = Enumerable.Range(0, lines.Count).ToArray();
+        int Root(int i) { while (parent[i] != i) { parent[i] = parent[parent[i]]; i = parent[i]; } return i; }
+        // Конец ответвления на середине шины образует соединение. Пересечение линий
+        // без конечной точки не склеивает независимые сети.
+        for (int i=0; i<lines.Count; i++) for (int j=i+1; j<lines.Count; j++)
+            if (Touches(lines[i], lines[j])) parent[Root(j)] = Root(i);
+        return Enumerable.Range(0, lines.Count).GroupBy(Root).Select(g => g.Select(i => lines[i]).ToList()).ToList();
     }
 
     private static DiagramEquipment ResolveEnd(string panel, List<DiagramEquipment> equipment, string side, DiagramPoint? point = null)
