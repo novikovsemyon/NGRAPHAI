@@ -30,6 +30,7 @@ internal static class Program
             LineNumberingTests.Run();
             ModelSchemeTests.Run();
             SchemeSymbolTests.Run();
+            DuctCableTests.Run();
             var workspace = new HovsWorkspaceWindow(); Show(workspace);
             var projects = (ListBox)workspace.FindName("Projects");
             if (projects.Items.Count != 1) throw new Exception("Object list did not load");
@@ -50,7 +51,7 @@ internal static class Program
             var rename = new HovsProjectNameWindow(project.Name); Show(rename); rename.Close();
             var wizard = new HovsSchemaWizardWindow(workbook, new HovsSchema { WorksheetName = "ХОВС", HeaderRow = 1, LastHeaderRow = 1, FirstDataRow = 2 }, source); Show(wizard); wizard.Close();
             var help = new NGraphView(new NGraph.ViewModels.NGraphViewModel { RevitVersion = "2027 (UI test)" }); Show(help);
-            if (((ListBox)help.FindName("Topics")).Items.Count != 24) throw new Exception("Help topics missing");
+            if (((ListBox)help.FindName("Topics")).Items.Count != 25) throw new Exception("Help topics missing");
             ((TextBox)help.FindName("Search")).Text = "ОкруглениеКабеля";
             if (((ListBox)help.FindName("Topics")).Items.Count == 0) throw new Exception("Help full-text search failed");
             help.Close(); workspace.Close();

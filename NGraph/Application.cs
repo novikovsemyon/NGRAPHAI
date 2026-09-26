@@ -82,6 +82,11 @@ public class Application : ExternalApplication
         buttonCreateConnectionWithoutModelLengh.SetImage("/NGraph;component/Resources/Icons/NG_cabel_16.png");
         buttonCreateConnectionWithoutModelLengh.SetLargeImage("/NGraph;component/Resources/Icons/NG_cabel_32.png");
 
+        var ductCable = panelStruct.AddPushButton<TransferDuctCableRoutesCommand>("Кабель по\nвоздуховодам");
+        ductCable.SetImage("/NGraph;component/Resources/Icons/NG_duct_createShema_16.png");
+        ductCable.SetLargeImage("/NGraph;component/Resources/Icons/NG_duct_createShema_32.png");
+        ductCable.LongDescription = "Откройте схему с зелёными точками. Выберите параметр воздуховодов: номера кабелей будут записаны на кратчайших маршрутах, а длины — в зелёные точки. Электрические цепи не требуются. Закреплённые линии описывают звезду.";
+
         var buttonCutLines = panelStruct.AddPushButton<CutLineOnViewDrafting>("Вырезать\nлинии");
         buttonCutLines.SetImage("/NGraph;component/Resources/Icons/NG_cut_16.png");
         buttonCutLines.SetLargeImage("/NGraph;component/Resources/Icons/NG_cut_32.png");

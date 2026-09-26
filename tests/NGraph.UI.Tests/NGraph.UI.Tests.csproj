@@ -9,6 +9,11 @@
     <Compile Include="../../NGraph/Views/DialogTheme.cs" Link="Views/DialogTheme.cs"/>
     <Compile Include="../../NGraph/Views/LineNumberingView.xaml.cs" Link="Views/LineNumberingView.xaml.cs"/>
     <Compile Include="../../NGraph/Core/LineNumberingOptions.cs" Link="Core/LineNumberingOptions.cs"/>
+    <Compile Include="../../NGraph/Core/CableRouting/CableRouteGraph.cs;../../NGraph/Core/CableRouting/CableDiagram.cs;../../NGraph/Core/CableRouting/CableRoutingModels.cs;../../NGraph/Core/CableRouting/CableRoutingPreferences.cs" Link="Core/%(Filename)%(Extension)"/>
+    <Compile Include="../../NGraph/ViewModels/DuctCableViewModel.cs" Link="ViewModels/DuctCableViewModel.cs"/>
+    <Compile Include="../../NGraph/Views/DuctCableView.xaml.cs" Link="Views/DuctCableView.xaml.cs"/>
+    <Page Include="../../NGraph/Views/DuctCableView.xaml" Link="Views/DuctCableView.xaml"/>
+    <Resource Include="../../NGraph/Resources/Icons/NG_duct_createShema_32.png" Link="Resources/Icons/NG_duct_createShema_32.png"/>
     <Compile Include="../../NGraph/Core/ModelSchemes/SchemeModel.cs;../../NGraph/Core/ModelSchemes/SchemePlanner.cs;../../NGraph/Core/ModelSchemes/SchemeIniCatalog.cs;../../NGraph/Core/INIManager.cs" Link="Core/%(Filename)%(Extension)"/>
     <Compile Include="../../NGraph/ViewModels/ParameterSchemeViewModel.cs" Link="ViewModels/ParameterSchemeViewModel.cs"/>
     <Compile Include="../../NGraph/ViewModels/SchemeSymbolRow.cs;../../NGraph/Core/ModelSchemes/SchemeIniFile.cs" Link="Core/%(Filename)%(Extension)"/>
