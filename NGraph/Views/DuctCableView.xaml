@@ -1,0 +1,102 @@
+<Window x:Class="NGraph.Views.DuctCableView"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="NGraph — Кабель по воздуховодам" Width="1180" Height="800" MinWidth="960" MinHeight="650"
+        Icon="/NGraph;component/Resources/Icons/NG_duct_createShema_32.png">
+    <Window.Resources><ResourceDictionary><ResourceDictionary.MergedDictionaries>
+        <ResourceDictionary Source="CompactDialogStyles.xaml"/>
+    </ResourceDictionary.MergedDictionaries></ResourceDictionary></Window.Resources>
+    <Grid Margin="18">
+        <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition/>
+            <RowDefinition Height="Auto"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
+        <StackPanel>
+            <TextBlock Text="Кабель по воздуховодам" Style="{StaticResource Heading}"/>
+            <TextBlock Text="{Binding ViewName, StringFormat=Чертёжный вид: {0}}" TextTrimming="CharacterEllipsis" ToolTip="{Binding ViewName}"/>
+            <TextBlock x:Name="SettingsWarning" Foreground="#AD2234" TextWrapping="Wrap"/>
+        </StackPanel>
+        <Grid Grid.Row="1" Margin="0,8,0,10">
+            <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="18"/><ColumnDefinition Width="210"/></Grid.ColumnDefinitions>
+            <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
+            <Label Content="Параметр воздуховода для номеров кабелей" Target="{Binding ElementName=ParameterInput}"/>
+            <ComboBox x:Name="ParameterInput" Grid.Row="1" ItemsSource="{Binding Parameters}" DisplayMemberPath="DisplayName"
+                      SelectedItem="{Binding Parameter}" IsTextSearchEnabled="True" TextSearch.TextPath="Name" MaxDropDownHeight="270"/>
+            <Label Grid.Column="2" Content="Округление длины вверх, м" Target="{Binding ElementName=RoundingInput}"/>
+            <TextBox x:Name="RoundingInput" Grid.Row="1" Grid.Column="2" Text="{Binding Rounding, UpdateSourceTrigger=PropertyChanged}"/>
+            <TextBlock Grid.Row="2" Grid.ColumnSpan="3" FontSize="12" Foreground="#52627A" TextWrapping="Wrap" Margin="0,5,0,5"
+                       Text="Выберите существующий текстовый параметр экземпляра. Для разных схем используйте отдельные параметры; выбор запоминается для этого вида."/>
+            <StackPanel Grid.Row="3" Grid.ColumnSpan="3">
+                <CheckBox x:Name="AppendInput" Content="Дополнить существующие номера (иначе заменить на воздуховодах маршрутов)" IsChecked="{Binding Append}"/>
+                <CheckBox x:Name="ClearInput" Content="Очистить этот параметр на остальных воздуховодах задействованных систем" IsChecked="{Binding ClearUnused}" Margin="0,4,0,0"/>
+            </StackPanel>
+        </Grid>
+        <TabControl Grid.Row="2">
+            <TabItem Header="Кабели и длины">
+                <Grid Margin="6">
+                    <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
+                    <TextBlock Text="{Binding Summary}" Margin="0,0,0,7"/>
+                    <DataGrid x:Name="CableTable" Grid.Row="1" ItemsSource="{Binding Routes}" SelectedItem="{Binding SelectedRoute}"
+                              AutoGenerateColumns="False" CanUserAddRows="False" SelectionMode="Single" FrozenColumnCount="2">
+                        <DataGrid.Columns>
+                            <DataGridCheckBoxColumn Header="✓" Binding="{Binding Included, UpdateSourceTrigger=PropertyChanged}" Width="38"/>
+                            <DataGridTextColumn Header="Кабель" Binding="{Binding Number}" IsReadOnly="True" Width="85"/>
+                            <DataGridTextColumn Header="Начало" Binding="{Binding Begin}" IsReadOnly="True" Width="100"/>
+                            <DataGridTextColumn Header="Конец" Binding="{Binding End}" IsReadOnly="True" Width="100"/>
+                            <DataGridTextColumn Header="Связь" Binding="{Binding Kind}" IsReadOnly="True" Width="100"/>
+                            <DataGridTextColumn Header="Путь, м" Binding="{Binding Length}" IsReadOnly="True" Width="78"/>
+                            <DataGridTextColumn Header="Было" Binding="{Binding PreviousLength}" IsReadOnly="True" Width="70"/>
+                            <DataGridTextColumn Header="Запись, м" Binding="{Binding NewLength}" IsReadOnly="True" Width="83"/>
+                            <DataGridTextColumn Header="Результат проверки" Binding="{Binding Status}" IsReadOnly="True" Width="*" MinWidth="180">
+                                <DataGridTextColumn.ElementStyle><Style TargetType="TextBlock"><Setter Property="TextWrapping" Value="Wrap"/></Style></DataGridTextColumn.ElementStyle>
+                            </DataGridTextColumn>
+                        </DataGrid.Columns>
+                    </DataGrid>
+                    <Border Grid.Row="2" Background="#E8EEF7" Padding="9" Margin="0,8,0,0" CornerRadius="4">
+                        <StackPanel>
+                            <TextBlock Text="{Binding SelectedRoute.ModelIds, StringFormat=NS_ElementId: {0}}"/>
+                            <TextBlock Text="{Binding SelectedRoute.Systems, StringFormat=Система воздуховодов: {0}}" TextTrimming="CharacterEllipsis"/>
+                            <TextBlock Text="{Binding SelectedRoute.RouteIds, StringFormat=Маршрут (ID воздуховодов): {0}}" TextTrimming="CharacterEllipsis" ToolTip="{Binding SelectedRoute.RouteIds}"/>
+                            <TextBlock Text="{Binding SelectedLength}" FontWeight="SemiBold" Margin="0,3,0,0"/>
+                        </StackPanel>
+                    </Border>
+                </Grid>
+            </TabItem>
+            <TabItem x:Name="WritesTab" Header="Запись в воздуховоды">
+                <Grid Margin="6"><Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition/></Grid.RowDefinitions>
+                    <TextBlock Text="{Binding WriteSummary}" Margin="0,0,0,7" TextWrapping="Wrap"/>
+                    <DataGrid x:Name="DuctTable" Grid.Row="1" ItemsSource="{Binding Writes}" IsReadOnly="True" AutoGenerateColumns="False" CanUserAddRows="False">
+                        <DataGrid.Columns>
+                            <DataGridTextColumn Header="ID" Binding="{Binding Id}" Width="80"/>
+                            <DataGridTextColumn Header="Система" Binding="{Binding System}" Width="180"/>
+                            <DataGridTextColumn Header="Было" Binding="{Binding OldValue}" Width="*"/>
+                            <DataGridTextColumn Header="Будет записано" Binding="{Binding NewValue}" Width="*"/>
+                            <DataGridTextColumn Header="Результат" Binding="{Binding Status}" Width="230"/>
+                        </DataGrid.Columns>
+                    </DataGrid>
+                </Grid>
+            </TabItem>
+        </TabControl>
+        <StackPanel Grid.Row="3" Margin="0,9,0,0">
+            <Expander Header="Марки воздуховодов на плане или разрезе">
+                <StackPanel Margin="4,6,4,3">
+                    <CheckBox x:Name="CreateTagsInput" Content="Добавить марки на вид модели" IsChecked="{Binding CreateTags}"/>
+                    <Grid Margin="0,6,0,0" IsEnabled="{Binding CreateTags}">
+                        <Grid.ColumnDefinitions><ColumnDefinition/><ColumnDefinition Width="12"/><ColumnDefinition/></Grid.ColumnDefinitions>
+                        <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
+                        <TextBlock Text="План / разрез"/><TextBlock Grid.Column="2" Text="Загруженный тип марки воздуховода"/>
+                        <ComboBox x:Name="TagViewInput" Grid.Row="1" ItemsSource="{Binding TagViews}" DisplayMemberPath="Name" SelectedItem="{Binding TagView}"/>
+                        <ComboBox x:Name="TagTypeInput" Grid.Row="1" Grid.Column="2" ItemsSource="{Binding TagTypes}" DisplayMemberPath="Name" SelectedItem="{Binding TagType}"/>
+                    </Grid>
+                    <TextBlock Text="Семейство марки должно выводить выбранный параметр. Добавляются марки видимых жёстких воздуховодов; существующие марки того же типа сохраняются."
+                               TextWrapping="Wrap" FontSize="12" Foreground="#52627A" Margin="0,5,0,0"/>
+                </StackPanel>
+            </Expander>
+            <TextBlock Text="Длина — сумма участков оси воздуховодов по кратчайшему пути. Фитинги обеспечивают соединение; их габариты и запас кабеля не добавляются."
+                       TextWrapping="Wrap" FontSize="12" Foreground="#52627A" Margin="0,8,0,0"/>
+            <TextBlock Text="{Binding Error}" TextWrapping="Wrap" Foreground="#AD2234" Margin="0,6,0,0"/>
+        </StackPanel>
+        <StackPanel Grid.Row="4" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,10,0,0">
+            <Button Content="Отмена" Click="Cancel_Click"/>
+            <Button x:Name="Confirm" Content="Записать номера и длины" IsEnabled="{Binding CanWrite}" Click="Confirm_Click" IsDefault="True"/>
+        </StackPanel>
+    </Grid>
+</Window>
