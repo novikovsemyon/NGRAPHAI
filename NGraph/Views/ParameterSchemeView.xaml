@@ -76,7 +76,7 @@
                         <DataGrid x:Name="EquipmentPreview" ItemsSource="{Binding Symbols}" IsReadOnly="True" AutoGenerateColumns="False" Margin="0,5,0,0"
                                   LoadingRow="Equipment_LoadingRow" RowDetailsVisibilityMode="VisibleWhenSelected" SelectionMode="Single" MinRowHeight="86">
                             <DataGrid.Columns>
-                                <DataGridTemplateColumn Header="УГО на схеме" Width="130">
+                                <DataGridTemplateColumn Header="УГО на схеме" Width="105">
                                     <DataGridTemplateColumn.CellTemplate><DataTemplate>
                                         <Grid Margin="4">
                                             <Image Source="{Binding Preview}" Stretch="Uniform" Height="74">
@@ -89,22 +89,30 @@
                                         </Grid>
                                     </DataTemplate></DataGridTemplateColumn.CellTemplate>
                                 </DataGridTemplateColumn>
-                                <DataGridTextColumn Header="Имя панели" Binding="{Binding PanelName}" Width="115"/>
-                                <DataGridTextColumn Header="Позиция" Binding="{Binding Position}" Width="80"/>
-                                <DataGridTemplateColumn Header="Семейство / Symbol" Width="200">
+                                <DataGridTemplateColumn Header="Оборудование" Width="100">
+                                    <DataGridTemplateColumn.CellTemplate><DataTemplate><StackPanel Margin="4">
+                                        <TextBlock Text="{Binding PanelName}" TextWrapping="Wrap" FontWeight="SemiBold"/>
+                                        <TextBlock Text="Позиция:" Foreground="#52627A" FontSize="11" Margin="0,4,0,0"/>
+                                        <TextBlock Text="{Binding Position}" TextWrapping="Wrap"/>
+                                    </StackPanel></DataTemplate></DataGridTemplateColumn.CellTemplate>
+                                </DataGridTemplateColumn>
+                                <DataGridTemplateColumn Header="INI / секция" Width="135">
+                                    <DataGridTemplateColumn.CellTemplate><DataTemplate><StackPanel Margin="4" ToolTip="{Binding IniPath}">
+                                        <TextBlock Text="{Binding IniFileName}" TextWrapping="Wrap"/>
+                                        <TextBlock Text="{Binding IniSection}" TextWrapping="Wrap" FontWeight="SemiBold" Margin="0,4,0,0"/>
+                                    </StackPanel></DataTemplate></DataGridTemplateColumn.CellTemplate>
+                                </DataGridTemplateColumn>
+                                <DataGridTemplateColumn Header="Семейство / Symbol" Width="*" MinWidth="150">
                                     <DataGridTemplateColumn.CellTemplate><DataTemplate><StackPanel Margin="4"><TextBlock Text="{Binding FamilyName}" TextWrapping="Wrap"/><TextBlock Text="{Binding Symbol}" TextWrapping="Wrap" FontWeight="SemiBold"/></StackPanel></DataTemplate></DataGridTemplateColumn.CellTemplate>
                                 </DataGridTemplateColumn>
-                                <DataGridTextColumn Header="INI" Binding="{Binding IniFileName}" Width="150"/>
-                                <DataGridTextColumn Header="Секция INI" Binding="{Binding IniSection}" Width="100"/>
-                                <DataGridTextColumn Header="Проверка" Binding="{Binding MappingStatus}" Width="250"/>
-                                <DataGridTextColumn Header="ID" Binding="{Binding Id}" Width="75"/>
                             </DataGrid.Columns>
-                            <DataGrid.RowDetailsTemplate><DataTemplate><StackPanel Margin="8" MaxWidth="500" HorizontalAlignment="Left">
+                            <DataGrid.RowDetailsTemplate><DataTemplate><ScrollViewer MaxHeight="170" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled"><StackPanel Margin="8" MaxWidth="500" HorizontalAlignment="Left">
+                                <StackPanel Orientation="Horizontal"><TextBlock Text="ID: "/><TextBlock Text="{Binding Id}"/><TextBlock Text=" · "/><TextBlock Text="{Binding Source.Name}"/></StackPanel>
                                 <TextBlock Text="{Binding IniPath}" TextWrapping="Wrap" FontWeight="SemiBold"/>
                                 <TextBlock Text="{Binding MappingStatus}" TextWrapping="Wrap" Margin="0,4,0,4"/>
                                 <TextBlock Text="Параметры секции INI" FontWeight="SemiBold"/>
                                 <TextBlock Text="{Binding IniValues}" TextWrapping="Wrap" FontFamily="Consolas"/>
-                            </StackPanel></DataTemplate></DataGrid.RowDetailsTemplate>
+                            </StackPanel></ScrollViewer></DataTemplate></DataGrid.RowDetailsTemplate>
                         </DataGrid>
                     </TabItem>
                     <TabItem Header="{Binding IssuesTitle}">

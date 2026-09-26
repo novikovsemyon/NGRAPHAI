@@ -94,7 +94,7 @@ public sealed partial class ParameterSchemeView
         try
         {
             var selected = EquipmentPreview.SelectedItem as SchemeSymbolRow;
-            var path = selected?.IniPath;
+            var path = selected?.IniPath ?? string.Empty;
             if (string.IsNullOrEmpty(path) || !File.Exists(path))
             {
                 var picker = new OpenFileDialog { Title = "Выберите INI для редактирования", Filter = "Настройки INI (*.ini)|*.ini", CheckFileExists = true,
