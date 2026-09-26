@@ -77,8 +77,7 @@ internal sealed class SchemeSymbolPreviewService
                     ExportRange = ExportRange.SetOfViews, FilePath = Path.Combine(directory, "ugo"),
                     ZoomType = ZoomFitType.FitToPage, PixelSize = 384,
                     FitDirection = width >= height ? FitDirectionType.Horizontal : FitDirectionType.Vertical,
-                    HLRandWFViewsFileType = ImageFileType.PNG, ShadowViewsFileType = ImageFileType.PNG,
-                    ImageResolution = ImageResolution.DPI_96 };
+                    HLRandWFViewsFileType = ImageFileType.PNG, ShadowViewsFileType = ImageFileType.PNG };
                 options.SetViewsAndSheets(new List<ElementId> { view.Id });
                 _document.ExportImage(options);
                 var file = Directory.GetFiles(directory, "*.png").SingleOrDefault()

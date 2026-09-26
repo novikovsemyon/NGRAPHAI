@@ -65,8 +65,8 @@ public sealed partial class ParameterSchemeView
         catch (Exception ex) { row.SetPreview(null, ex.Message); }
         finally { Cursor = null; IsEnabled = true; _rendering = false; if (!_closed && _previewQueue.Count > 0) _previewTimer.Start(); }
     }
-    private void ReloadIni_Click(object sender, RoutedEventArgs e) => ReloadIni();
-    private void ReloadIni()
+    private void ReloadIni_Click(object sender, RoutedEventArgs e) => ReloadIniMappings();
+    private void ReloadIniMappings()
     {
         _previewTimer.Stop(); _previewQueue.Clear(); _queued.Clear();
         try { _viewModel.ReloadSymbols(); IniActionStatus.Text = "INI перечитаны."; }
@@ -103,7 +103,7 @@ public sealed partial class ParameterSchemeView
                 path = picker.FileName;
             }
             var editor = new SchemeIniEditorView(SchemeIniFile.Open(path)) { Owner = this };
-            if (editor.ShowDialog() == true) ReloadIni();
+            if (editor.ShowDialog() == true) ReloadIniMappings();
         }
         catch (Exception ex) { IniActionStatus.Text = ex.Message; }
         finally { if (_previewQueue.Count > 0) _previewTimer.Start(); QueueVisiblePreviews(); }
