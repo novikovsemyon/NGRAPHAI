@@ -23,10 +23,7 @@ internal sealed class ModelSchemeBuilder
         var viewType = new FilteredElementCollector(_document).OfClass(typeof(ViewFamilyType)).Cast<ViewFamilyType>()
             .FirstOrDefault(t => t.ViewFamily == ViewFamily.Drafting)
             ?? throw new InvalidOperationException("В проекте нет типа чертёжного вида.");
-        var names = new HashSet<string>(new FilteredElementCollector(_document).OfClass(typeof(View)).Cast<View>()
-            .Select(v => v.Name), StringComparer.OrdinalIgnoreCase);
-        var name = options.ViewName.Trim(); var suffix = 2;
-        while (names.Contains(name)) name = options.ViewName.Trim() + " (" + suffix++ + ")";
+        var name = GetViewName(_document, options.ViewName);
 
         using var transaction = new Transaction(_document, "Структурная схема по модели");
         transaction.Start();
@@ -127,18 +124,14 @@ internal sealed class ModelSchemeBuilder
     private Dictionary<string, FamilySymbol> ResolveSymbols(SchemePlan plan, string iniDirectory)
     {
         var ini = new SchemeIniCatalog(iniDirectory);
-        var available = new FilteredElementCollector(_document).OfClass(typeof(FamilySymbol))
-            .OfCategory(BuiltInCategory.OST_DetailComponents).Cast<FamilySymbol>()
-            .GroupBy(s => s.Name, StringComparer.Ordinal).ToDictionary(g => g.Key, g => g.ToList(), StringComparer.Ordinal);
+        var resolver = new SchemeSymbolResolver(_document);
         var result = new Dictionary<string, FamilySymbol>(); var errors = new List<string>();
         foreach (var item in plan.Elements)
         {
             try
             {
                 var name = ini.Resolve(item.Source.IniGroup, item.Source.Position);
-                if (!available.TryGetValue(name, out var matches)) throw new InvalidOperationException($"Не загружен типоразмер элемента узла «{name}».");
-                if (matches.Count != 1) throw new InvalidOperationException($"Имя УГО «{name}» встречается в нескольких семействах. Задайте уникальное имя типоразмера.");
-                result.Add(item.Id, matches[0]);
+                result.Add(item.Id, resolver.Resolve(name));
             }
             catch (InvalidOperationException ex) { errors.Add($"Элемент {item.Id}: {ex.Message}"); }
         }
@@ -147,7 +140,16 @@ internal sealed class ModelSchemeBuilder
         return result;
     }
 
-    private static void SetEquipmentParameters(FamilyInstance instance, SchemeSourceElement source, string viewName)
+    internal static string GetViewName(Document document, string requested)
+    {
+        var names = new HashSet<string>(new FilteredElementCollector(document).OfClass(typeof(View)).Cast<View>()
+            .Select(v => v.Name), StringComparer.OrdinalIgnoreCase);
+        var name = requested.Trim(); var suffix = 2;
+        while (names.Contains(name)) name = requested.Trim() + " (" + suffix++ + ")";
+        return name;
+    }
+
+    internal static void SetEquipmentParameters(FamilyInstance instance, SchemeSourceElement source, string viewName)
     {
         var values = new Dictionary<string, string> {
             [Const.Param_NS_ElementId] = source.Id, [Const.Param_ADSK_Position] = source.Position,

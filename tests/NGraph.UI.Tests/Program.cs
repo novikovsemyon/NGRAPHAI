@@ -29,6 +29,7 @@ internal static class Program
             _ = new System.Windows.Application { ShutdownMode = ShutdownMode.OnExplicitShutdown };
             LineNumberingTests.Run();
             ModelSchemeTests.Run();
+            SchemeSymbolTests.Run();
             var workspace = new HovsWorkspaceWindow(); Show(workspace);
             var projects = (ListBox)workspace.FindName("Projects");
             if (projects.Items.Count != 1) throw new Exception("Object list did not load");

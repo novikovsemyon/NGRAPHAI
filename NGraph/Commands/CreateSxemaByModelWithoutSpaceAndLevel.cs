@@ -32,10 +32,11 @@ public sealed class CreateSxemaByModelWithoutSpaceAndLevel : ExternalCommand
             return;
         }
         var iniDirectory = UserSettings.Load().IniDirectory;
-        var viewModel = new ParameterSchemeViewModel(source.Elements, source.Parameters, iniDirectory);
+        var previews = new SchemeSymbolPreviewService(document, iniDirectory);
+        var viewModel = new ParameterSchemeViewModel(source.Elements, source.Parameters, iniDirectory, previews.ReadMappings);
         while (true)
         {
-            var window = new ParameterSchemeView(viewModel);
+            var window = new ParameterSchemeView(viewModel, previews.Render);
             new WindowInteropHelper(window).Owner = Application.MainWindowHandle;
             if (window.ShowDialog() != true) return;
             ViewDrafting view;
